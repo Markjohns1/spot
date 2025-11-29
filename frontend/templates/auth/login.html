@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block title %}Login - The Spot{% endblock %}
+
+{% block content %}
+<div class="container-fluid h-100">
+    <div class="row h-100 align-items-center justify-content-center">
+        <div class="col-12 col-md-6 col-lg-4">
+            <!-- Login Card -->
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-4 p-md-5">
+                    <!-- Logo and Title -->
+                    <div class="text-center mb-4">
+                        <div class="mb-3">
+                            <i class="bi bi-drop-circle-fill text-primary" style="font-size: 4rem;"></i>
+                        </div>
+                        <h1 class="h3 mb-2 fw-bold">The Spot</h1>
+                        <p class="text-muted">Car Wash Management System</p>
+                        <small class="d-block text-muted mb-4">Kenya's Premier Car Wash</small>
+                    </div>
+
+                    <!-- Login Form -->
+                    <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm" class="needs-validation" novalidate>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <!-- Username Field -->
+                        <div class="form-group mb-3">
+                            <label for="username" class="form-label fw-medium">
+                                <i class="bi bi-person me-2"></i>Username
+                            </label>
+                            <input type="text" class="form-control form-control-lg" id="username" name="username"
+                                   placeholder="Enter your username" required autocomplete="username"
+                                   value="{{ request.form.username or '' }}">
+                            <div class="invalid-feedback">
+                                Please enter your username
+                            </div>
+                        </div>
+
+                        <!-- Password Field -->
+                        <div class="form-group mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label for="password" class="form-label fw-medium mb-0">
+                                    <i class="bi bi-lock me-2"></i>Password
+                                </label>
+                                <small class="text-muted">
+                                    <a href="#" class="text-decoration-none" onclick="alert('Contact administrator to reset password'); return false;">
+                                        Forgot password?
+                                    </a>
+                                </small>
+                            </div>
+                            <input type="password" class="form-control form-control-lg" id="password" name="password"
+                                   placeholder="Enter your password" required autocomplete="current-password">
+                            <div class="invalid-feedback">
+                                Please enter your password
+                            </div>
+                        </div>
+
+                        <!-- Remember Me -->
+                        <div class="form-group mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remember" name="remember" value="true">
+                                <label class="form-check-label" for="remember">
+                                    Remember me for faster access
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>
+                            Sign In
+                        </button>
+
+                        <!-- Demo Account Info -->
+                        <div class="alert alert-info small text-center mb-0">
+                            <i class="bi bi-info-circle me-1"></i>
+                            <strong>Demo Account:</strong><br>
+                            Username: <code>admin</code><br>
+                            Password: <code>admin123</code>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-4">
+                <small class="text-muted">
+                    © 2024 The Spot - Kenya<br>
+                    Professional Car Wash Management
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Login Buttons for Demo -->
+<div class="container-fluid mt-3 d-lg-none">
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <div class="card bg-light border-0">
+                <div class="card-body p-3">
+                    <h6 class="card-title mb-3 text-center">Quick Login</h6>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <button onclick="quickLogin('admin', 'admin123')" class="btn btn-outline-primary w-100 py-2">
+                                <i class="bi bi-person-badge d-block mb-1"></i>
+                                Admin
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button onclick="quickLogin('manager', 'manager123')" class="btn btn-outline-success w-100 py-2">
+                                <i class="bi bi-person-gear d-block mb-1"></i>
+                                Manager
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button onclick="quickLogin('staff', 'staff123')" class="btn btn-outline-info w-100 py-2">
+                                <i class="bi bi-person d-block mb-1"></i>
+                                Staff
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button onclick="alert('Demo users: admin/admin123, manager/manager123, staff/staff123')"
+                                    class="btn btn-outline-secondary w-100 py-2">
+                                <i class="bi bi-question-circle d-block mb-1"></i>
+                                Help
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Focus username field on load
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('username').focus();
+});
+
+// Quick login function
+function quickLogin(username, password) {
+    document.getElementById('username').value = username;
+    document.getElementById('password').value = password;
+
+    // Add loading state
+    const form = document.getElementById('loginForm');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+
+    submitBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Signing in...';
+    submitBtn.disabled = true;
+
+    // Submit form
+    setTimeout(() => {
+        form.submit();
+    }, 500);
+}
+
+// Form validation
+document.getElementById('loginForm').addEventListener('submit', function(event) {
+    const form = event.target;
+
+    if (!form.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    form.classList.add('was-validated');
+
+    // Add loading state
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+
+    submitBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Signing in...';
+    submitBtn.disabled = true;
+
+    // Handle form errors after submission
+    setTimeout(() => {
+        if (!form.querySelector('.is-invalid')) {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    }, 3000);
+});
+
+// Prevent multiple form submissions
+let formSubmitted = false;
+document.getElementById('loginForm').addEventListener('submit', function(event) {
+    if (formSubmitted) {
+        event.preventDefault();
+        return false;
+    }
+    formSubmitted = true;
+});
+
+// Show password toggle functionality
+function togglePassword() {
+    const passwordInput = document.getElementById('password');
+    const passwordIcon = document.getElementById('passwordToggle');
+
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        passwordIcon.classList.remove('bi-eye');
+        passwordIcon.classList.add('bi-eye-slash');
+    } else {
+        passwordInput.type = 'password';
+        passwordIcon.classList.remove('bi-eye-slash');
+        passwordIcon.classList.add('bi-eye');
+    }
+}
+
+// Add password visibility toggle button
+document.addEventListener('DOMContentLoaded', function() {
+    const passwordGroup = document.getElementById('password').closest('.form-group');
+    const passwordInput = document.getElementById('password');
+
+    // Create toggle button
+    const toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
+    toggleBtn.className = 'btn btn-outline-secondary position-absolute';
+    toggleBtn.style.cssText = 'right: 12px; top: 42px; z-index: 10; padding: 6px 8px;';
+    toggleBtn.innerHTML = '<i class="bi bi-eye" id="passwordToggle"></i>';
+    toggleBtn.setAttribute('onclick', 'togglePassword()');
+    toggleBtn.setAttribute('type', 'button');
+
+    // Make password input relative
+    passwordGroup.style.position = 'relative';
+
+    // Add toggle button
+    passwordInput.parentNode.appendChild(toggleBtn);
+});
+
+// Handle keyboard shortcuts
+document.addEventListener('keydown', function(event) {
+    // Focus password field when Enter is pressed in username field
+    if (event.key === 'Enter' && document.activeElement.id === 'username') {
+        event.preventDefault();
+        document.getElementById('password').focus();
+    }
+});
+
+// Auto-select appropriate user based on time of day
+document.addEventListener('DOMContentLoaded', function() {
+    const hour = new Date().getHours();
+    const usernameField = document.getElementById('username');
+
+    // Auto-suggest admin during business setup hours
+    if (hour >= 8 && hour <= 9 && !usernameField.value) {
+        usernameField.placeholder = 'Try: admin';
+    }
+});
+</script>
+
+<style>
+/* Login page specific styles */
+.card {
+    border-radius: 1rem !important;
+}
+
+.form-control-lg {
+    padding: 0.75rem 1rem;
+    font-size: 1.1rem;
+    border-radius: 0.5rem;
+}
+
+.btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1.1rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+}
+
+/* Quick login buttons */
+.btn-outline-primary:hover,
+.btn-outline-success:hover,
+.btn-outline-info:hover {
+    transform: translateY(-2px);
+    transition: all 0.2s ease;
+}
+
+/* Password toggle button */
+.btn-outline-secondary {
+    border: none;
+    background: transparent;
+}
+
+.btn-outline-secondary:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 2rem 1.5rem !important;
+    }
+
+    .form-control-lg,
+    .btn-lg {
+        font-size: 1rem;
+        padding: 0.75rem;
+    }
+}
+</style>
+{% endblock %}

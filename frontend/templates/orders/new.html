@@ -1,0 +1,1321 @@
+{% extends "base.html" %}
+
+{% block title %}New Service Order - The Spot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <!-- Mobile Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">New Service Order</h1>
+                    <p class="text-muted mb-0">Add car to the queue</p>
+                </div>
+                <div>
+                    <button onclick="window.history.back()" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i>
+                        <span class="d-none d-md-inline ms-2">Cancel</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form id="newOrderForm" class="needs-validation" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Step 1: Vehicle Information -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-car-front me-2"></i>
+                    <span id="stepTitle">Step 1: Vehicle Information</span>
+                </h5>
+                <div class="progress mt-2" style="height: 4px;">
+                    <div id="stepProgress" class="progress-bar bg-light" style="width: 25%"></div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="step1" class="step-content">
+                    <!-- Customer Search -->
+                    <div class="form-group mb-4">
+                        <label for="customerSearch" class="form-label fw-medium">
+                            <i class="bi bi-person-search me-2"></i>Customer Phone Number
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-telephone"></i>
+                            </span>
+                            <input type="tel" class="form-control form-control-lg" id="customerSearch"
+                                   name="customer_phone" placeholder="Search by phone number"
+                                   pattern="[0-9]{10}" maxlength="10" required autocomplete="tel">
+                            <button class="btn btn-outline-primary" type="button" onclick="searchCustomer()">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">
+                            Please enter a valid phone number
+                        </div>
+                        <small class="form-text text-muted">
+                            Enter customer's phone number to search existing records
+                        </small>
+
+                        <!-- Customer Results -->
+                        <div id="customerResults" class="mt-3"></div>
+                    </div>
+
+                    <!-- New Customer Form -->
+                    <div id="newCustomerSection" class="d-none">
+                        <div class="alert alert-info">
+                            <i class="bi bi-person-plus me-2"></i>
+                            New Customer - Enter Details
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="customerName" class="form-label">Full Name (Optional)</label>
+                                <input type="text" class="form-control" id="customerName" name="customer_name"
+                                       placeholder="Customer's full name">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="customerEmail" class="form-label">Email (Optional)</label>
+                                <input type="email" class="form-control" id="customerEmail" name="customer_email"
+                                       placeholder="customer@example.com">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Vehicle Information -->
+                    <div class="form-group mb-4">
+                        <label for="registrationNumber" class="form-label fw-medium">
+                            <i class="bi bi-card-text me-2"></i>Vehicle Registration Number *
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-upc-scan"></i>
+                            </span>
+                            <input type="text" class="form-control form-control-lg text-uppercase" id="registrationNumber"
+                                   name="registration_number" placeholder="e.g., KAB 123C" required
+                                   autocomplete="off" style="letter-spacing: 2px;">
+                            <button class="btn btn-outline-secondary" type="button" onclick="formatRegistrationNumber()"
+                                    title="Auto-format">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">
+                            Please enter a valid registration number
+                        </div>
+                        <small class="form-text text-muted">
+                            Enter complete registration number (Kenya format)
+                        </small>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label for="vehicleMake" class="form-label">Make (Optional)</label>
+                            <input type="text" class="form-control" id="vehicleMake" name="vehicle_make"
+                                   placeholder="e.g., Toyota" list="makeList">
+                            <datalist id="makeList">
+                                <option value="Toyota">
+                                <option value="Honda">
+                                <option value="Nissan">
+                                <option value="Mitsubishi">
+                                <option value="Suzuki">
+                                <option value="Subaru">
+                                <option value="Volkswagen">
+                                <option value="BMW">
+                                <option value="Mercedes-Benz">
+                                <option value="Audi">
+                            </datalist>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="vehicleModel" class="form-label">Model (Optional)</label>
+                            <input type="text" class="form-control" id="vehicleModel" name="vehicle_model"
+                                   placeholder="e.g., Corolla">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="vehicleColor" class="form-label">Color (Optional)</label>
+                            <input type="text" class="form-control" id="vehicleColor" name="vehicle_color"
+                                   placeholder="e.g., Silver" list="colorList">
+                            <datalist id="colorList">
+                                <option value="White">
+                                <option value="Black">
+                                <option value="Silver">
+                                <option value="Gray">
+                                <option value="Blue">
+                                <option value="Red">
+                                <option value="Green">
+                                <option value="Yellow">
+                                <option value="Brown">
+                            </datalist>
+                        </div>
+                    </div>
+
+                    <!-- Vehicle Quick Actions -->
+                    <div class="row g-2 mb-4">
+                        <div class="col-6 col-md-3">
+                            <button type="button" class="btn btn-outline-primary w-100 py-2" onclick="quickVehicleEntry()">
+                                <i class="bi bi-lightning d-block mb-1"></i>
+                                Quick Entry
+                            </button>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <button type="button" class="btn btn-outline-info w-100 py-2" onclick="findSimilarVehicle()">
+                                <i class="bi bi-search d-block mb-1"></i>
+                                Find Similar
+                            </button>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <button type="button" class="btn btn-outline-warning w-100 py-2" onclick="cameraCapture()">
+                                <i class="bi bi-camera d-block mb-1"></i>
+                                Camera
+                            </button>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <button type="button" class="btn btn-outline-secondary w-100 py-2" onclick="voiceInput()">
+                                <i class="bi bi-mic d-block mb-1"></i>
+                                Voice Input
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step Navigation -->
+                    <div class="d-flex justify-content-between">
+                        <div></div>
+                        <button type="button" class="btn btn-primary btn-lg" onclick="nextStep(2)">
+                            Next Step
+                            <i class="bi bi-arrow-right ms-2"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Service Selection -->
+                <div id="step2" class="step-content d-none">
+                    <div class="mb-4">
+                        <h6 class="mb-3">Select Services *</h6>
+
+                        <!-- Service Grid -->
+                        <div class="row g-3" id="serviceGrid">
+                            {% for service in services %}
+                            <div class="col-6 col-md-4 col-lg-3">
+                                <div class="service-card card h-100" data-service-id="{{ service.id }}"
+                                     data-service-price="{{ service.base_price }}"
+                                     onclick="toggleService({{ service.id }})">
+                                    <div class="card-body text-center p-3">
+                                        <div class="service-icon mb-2">
+                                            {% if 'basic' in service.name.lower() %}
+                                                <i class="bi bi-droplet fs-2 text-primary"></i>
+                                            {% elif 'interior' in service.name.lower() %}
+                                                <i class="bi bi-stars fs-2 text-info"></i>
+                                            {% elif 'engine' in service.name.lower() %}
+                                                <i class="bi bi-gear fs-2 text-warning"></i>
+                                            {% elif 'carpet' in service.name.lower() %}
+                                                <i class="bi bi-brush fs-2 text-success"></i>
+                                            {% elif 'detailing' in service.name.lower() %}
+                                                <i class="bi bi-gem fs-2 text-danger"></i>
+                                            {% else %}
+                                                <i class="bi bi-check-circle fs-2 text-secondary"></i>
+                                            {% endif %}
+                                        </div>
+                                        <h6 class="card-title mb-2">{{ service.name }}</h6>
+                                        {% if service.description %}
+                                        <p class="card-text small text-muted">{{ service.description[:50] }}{% if service.description|length > 50 %}...{% endif %}</p>
+                                        {% endif %}
+                                        <div class="service-price fw-bold text-primary">
+                                            KES {{ "{:,}".format(service.base_price|float) }}
+                                        </div>
+                                        <div class="service-duration small text-muted">
+                                            <i class="bi bi-clock"></i> {{ service.duration_minutes }} min
+                                        </div>
+                                    </div>
+                                    <div class="card-footer bg-transparent border-0 p-2">
+                                        <div class="form-check d-none">
+                                            <input class="form-check-input" type="checkbox" name="services"
+                                                   value="{{ service.id }}" data-price="{{ service.base_price }}"
+                                                   id="service_{{ service.id }}">
+                                            <label class="form-check-label" for="service_{{ service.id }}">
+                                                Select
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Service Summary -->
+                        <div class="mt-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="mb-0">Order Summary</h6>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAllServices()">
+                                            Clear All
+                                        </button>
+                                    </div>
+
+                                    <div id="selectedServices" class="mb-3">
+                                        <div class="text-muted">No services selected</div>
+                                    </div>
+
+                                    <div class="row align-items-center">
+                                        <div class="col">
+                                            <div class="d-flex justify-content-between">
+                                                <span class="text-muted">Subtotal:</span>
+                                                <span id="subtotal">KES 0</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span class="text-muted">Est. Duration:</span>
+                                                <span id="totalDuration">0 min</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-auto">
+                                            <div class="text-center">
+                                                <div class="h4 text-primary mb-0" id="totalAmount">KES 0</div>
+                                                <small class="text-muted">Total</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step Navigation -->
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-outline-secondary" onclick="previousStep(1)">
+                            <i class="bi bi-arrow-left me-2"></i>
+                            Previous Step
+                        </button>
+                        <button type="button" class="btn btn-primary btn-lg" onclick="nextStep(3)"
+                                id="step2NextBtn" disabled>
+                            Next Step
+                            <i class="bi bi-arrow-right ms-2"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Staff Assignment & Notes -->
+                <div id="step3" class="step-content d-none">
+                    <div class="row g-4">
+                        <!-- Staff Assignment -->
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Staff Assignment</h6>
+
+                            <div id="staffAssignment">
+                                <div class="text-muted mb-3">
+                                    Select staff members for each service
+                                </div>
+
+                                <div id="staffAssignmentList"></div>
+                            </div>
+
+                            <div class="mt-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="autoAssign" checked>
+                                    <label class="form-check-label" for="autoAssign">
+                                        Auto-assign to available staff
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Order Notes -->
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Order Notes</h6>
+
+                            <div class="form-group mb-3">
+                                <label for="orderNotes" class="form-label">Special Instructions</label>
+                                <textarea class="form-control" id="orderNotes" name="notes" rows="4"
+                                          placeholder="Any special requests or notes for this order..."
+                                          maxlength="500"></textarea>
+                                <small class="form-text text-muted">
+                                    Max 500 characters
+                                </small>
+                            </div>
+
+                            <!-- Quick Note Templates -->
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Quick Notes:</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm w-100"
+                                                onclick="addQuickNote('Customer waiting')">
+                                            Customer waiting
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm w-100"
+                                                onclick="addQuickNote('Urgent service')">
+                                            Urgent service
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm w-100"
+                                                onclick="addQuickNote('Customer is regular')">
+                                            Regular customer
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm w-100"
+                                                onclick="addQuickNote('Handle with care')">
+                                            Handle with care
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Priority -->
+                            <div class="form-group">
+                                <label class="form-label">Priority Level</label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="priority" id="priorityNormal" value="normal" checked>
+                                    <label class="btn btn-outline-secondary" for="priorityNormal">
+                                        <i class="bi bi-circle"></i> Normal
+                                    </label>
+
+                                    <input type="radio" class="btn-check" name="priority" id="priorityHigh" value="high">
+                                    <label class="btn btn-outline-warning" for="priorityHigh">
+                                        <i class="bi bi-exclamation-triangle"></i> High
+                                    </label>
+
+                                    <input type="radio" class="btn-check" name="priority" id="priorityVIP" value="vip">
+                                    <label class="btn btn-outline-danger" for="priorityVIP">
+                                        <i class="bi bi-star"></i> VIP
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Final Summary -->
+                    <div class="card bg-light mt-4">
+                        <div class="card-body">
+                            <h6 class="mb-3">Order Summary</h6>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <strong>Customer:</strong>
+                                        <span id="summaryCustomer">-</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Vehicle:</strong>
+                                        <span id="summaryVehicle">-</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Services:</strong>
+                                        <span id="summaryServicesCount">0</span> selected
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <strong>Duration:</strong>
+                                        <span id="summaryDuration">0 min</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Estimated Cost:</strong>
+                                        <span class="text-primary fw-bold" id="summaryTotal">KES 0</span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Priority:</strong>
+                                        <span id="summaryPriority">Normal</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step Navigation -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="button" class="btn btn-outline-secondary" onclick="previousStep(2)">
+                            <i class="bi bi-arrow-left me-2"></i>
+                            Previous Step
+                        </button>
+                        <button type="submit" class="btn btn-success btn-lg" id="submitBtn" disabled>
+                            <i class="bi bi-check-circle me-2"></i>
+                            Create Order
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay d-none">
+    <div class="text-center text-white">
+        <div class="spinner-border mb-3" role="status"></div>
+        <h4>Creating Order...</h4>
+        <p class="mb-0">Please wait while we process your order</p>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-check-circle me-2"></i>
+                    Order Created Successfully!
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                </div>
+                <h6 id="orderNumber" class="mb-3">Order #ORD-000</h6>
+                <p class="text-muted mb-4">Vehicle has been added to the queue</p>
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button onclick="printTicket()" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-printer me-2"></i>
+                            Print Ticket
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button onclick="addAnotherOrder()" class="btn btn-primary w-100">
+                            <i class="bi bi-plus-circle me-2"></i>
+                            Add Another
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="viewQueue()" class="btn btn-success w-100">
+                    <i class="bi bi-list-ol me-2"></i>
+                    View Queue
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let currentStep = 1;
+let selectedServices = new Map();
+let customerData = null;
+let vehicleData = null;
+
+// Initialize form
+document.addEventListener('DOMContentLoaded', function() {
+    // Focus customer search
+    document.getElementById('customerSearch').focus();
+
+    // Setup form validation
+    setupFormValidation();
+
+    // Setup service selection
+    setupServiceSelection();
+
+    // Auto-save draft
+    setupAutoSave();
+});
+
+// Customer search functionality
+async function searchCustomer() {
+    const phoneNumber = document.getElementById('customerSearch').value.trim();
+
+    if (phoneNumber.length < 10) {
+        showCustomerResults([]);
+        return;
+    }
+
+    try {
+        showLoading('Searching customer...');
+
+        const response = await SpotApp.apiCall(`/customers?search=${phoneNumber}`);
+
+        if (response.success && response.data.customers.length > 0) {
+            showCustomerResults(response.data.customers);
+        } else {
+            showCustomerResults([]);
+            showNewCustomerSection();
+        }
+    } catch (error) {
+        console.error('Customer search error:', error);
+        showCustomerError('Search failed. Please try again.');
+    } finally {
+        hideLoading();
+    }
+}
+
+function showCustomerResults(customers) {
+    const resultsDiv = document.getElementById('customerResults');
+
+    if (customers.length === 0) {
+        resultsDiv.innerHTML = `
+            <div class="alert alert-warning">
+                <i class="bi bi-person-x me-2"></i>
+                No customer found with this phone number
+            </div>
+        `;
+        showNewCustomerSection();
+        return;
+    }
+
+    let html = '<div class="list-group">';
+    customers.forEach(customer => {
+        html += `
+            <div class="list-group-item list-group-item-action cursor-pointer"
+                 onclick="selectCustomer(${customer.id}, ${JSON.stringify(customer).replace(/"/g, '&quot;')})">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-medium">${customer.name || 'Walk-in Customer'}</div>
+                        <small class="text-muted">${customer.phone_number}</small>
+                        ${customer.email ? `<br><small class="text-muted">${customer.email}</small>` : ''}
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-primary">${customer.total_visits} visits</span>
+                        <div class="small text-muted">${customer.is_returning ? 'Returning' : 'New'}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+
+    resultsDiv.innerHTML = html;
+    hideNewCustomerSection();
+}
+
+function showNewCustomerSection() {
+    document.getElementById('newCustomerSection').classList.remove('d-none');
+}
+
+function hideNewCustomerSection() {
+    document.getElementById('newCustomerSection').classList.add('d-none');
+}
+
+function selectCustomer(customerId, customer) {
+    customerData = customer;
+
+    // Fill form with customer data
+    document.getElementById('customerSearch').value = customer.phone_number;
+
+    if (customer.name) {
+        document.getElementById('customerName').value = customer.name;
+    }
+    if (customer.email) {
+        document.getElementById('customerEmail').value = customer.email;
+    }
+
+    // Hide customer search results
+    document.getElementById('customerResults').innerHTML = '';
+
+    // Focus on vehicle registration
+    document.getElementById('registrationNumber').focus();
+}
+
+function showCustomerError(message) {
+    const resultsDiv = document.getElementById('customerResults');
+    resultsDiv.innerHTML = `
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            ${message}
+        </div>
+    `;
+}
+
+// Vehicle functions
+function formatRegistrationNumber() {
+    const input = document.getElementById('registrationNumber');
+    let value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    // Basic Kenyan format formatting
+    if (value.length >= 3) {
+        if (value.length <= 7) {
+            // KAB 123C format
+            value = value.substring(0, 3) + ' ' + value.substring(3, 6) +
+                                   (value.substring(6) ? ' ' + value.substring(6) : '');
+        } else {
+            // KAB 1234 format
+            value = value.substring(0, 3) + ' ' + value.substring(3, 7) +
+                                   (value.substring(7) ? ' ' + value.substring(7) : '');
+        }
+    }
+
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+}
+
+function quickVehicleEntry() {
+    // Focus on registration with auto-format
+    const regInput = document.getElementById('registrationNumber');
+    regInput.focus();
+
+    // Add some common registration patterns for quick access
+    const commonPatterns = ['KAB', 'KBC', 'KCD', 'KCF', 'KCG'];
+
+    // Show quick pattern selector (could be enhanced with a modal)
+    const pattern = prompt('Enter registration pattern (KAB, KBC, etc.) or leave empty:');
+    if (pattern) {
+        regInput.value = pattern + ' ';
+        regInput.focus();
+    }
+}
+
+function findSimilarVehicle() {
+    const registration = document.getElementById('registrationNumber').value.toUpperCase();
+
+    if (registration.length < 3) {
+        alert('Please enter at least 3 characters of the registration number');
+        return;
+    }
+
+    // Search for similar vehicles
+    SpotApp.apiCall(`/vehicles?search=${registration}`)
+        .then(response => {
+            if (response.success && response.data.vehicles.length > 0) {
+                showSimilarVehicles(response.data.vehicles);
+            } else {
+                alert('No similar vehicles found');
+            }
+        })
+        .catch(error => {
+            console.error('Vehicle search error:', error);
+            alert('Search failed. Please try again.');
+        });
+}
+
+function showSimilarVehicles(vehicles) {
+    let html = '<div class="list-group">';
+    vehicles.forEach(vehicle => {
+        html += `
+            <div class="list-group-item list-group-item-action cursor-pointer"
+                 onclick="selectSimilarVehicle(${JSON.stringify(vehicle).replace(/"/g, '&quot;')})">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-medium">${vehicle.registration_number}</div>
+                        <small class="text-muted">${vehicle.make} ${vehicle.model || ''}</small>
+                    </div>
+                    <div>
+                        <small class="text-muted">${vehicle.service_count} services</small>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+
+    // Show in a modal or alert
+    alert('Similar vehicles found: ' + vehicles.map(v => v.registration_number).join(', '));
+}
+
+// Service selection
+function setupServiceSelection() {
+    const serviceCards = document.querySelectorAll('.service-card');
+
+    serviceCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const serviceId = parseInt(this.dataset.serviceId);
+            toggleService(serviceId);
+        });
+    });
+}
+
+function toggleService(serviceId) {
+    const card = document.querySelector(`[data-service-id="${serviceId}"]`);
+    const checkbox = document.getElementById(`service_${serviceId}`);
+
+    if (selectedServices.has(serviceId)) {
+        selectedServices.delete(serviceId);
+        card.classList.remove('border-primary', 'bg-light');
+        checkbox.checked = false;
+    } else {
+        const serviceData = {
+            id: serviceId,
+            price: parseFloat(card.dataset.servicePrice),
+            name: card.querySelector('.card-title').textContent,
+            duration: parseInt(card.querySelector('.service-duration').textContent) || 30
+        };
+
+        selectedServices.set(serviceId, serviceData);
+        card.classList.add('border-primary', 'bg-light');
+        checkbox.checked = true;
+    }
+
+    updateServiceSummary();
+    updateStaffAssignment();
+    updateOrderSummary();
+    validateStep2();
+}
+
+function updateServiceSummary() {
+    const container = document.getElementById('selectedServices');
+
+    if (selectedServices.size === 0) {
+        container.innerHTML = '<div class="text-muted">No services selected</div>';
+        return;
+    }
+
+    let html = '<div class="row g-2">';
+    let subtotal = 0;
+    let totalDuration = 0;
+
+    selectedServices.forEach(service => {
+        subtotal += service.price;
+        totalDuration += service.duration;
+
+        html += `
+            <div class="col-md-6">
+                <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded">
+                    <div>
+                        <div class="fw-medium">${service.name}</div>
+                        <small class="text-muted">${service.duration} min</small>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold">KES ${service.price.toLocaleString()}</div>
+                        <button type="button" class="btn btn-sm btn-outline-danger p-1"
+                                onclick="removeService(${service.id})">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+
+    // Update totals
+    document.getElementById('subtotal').textContent = `KES ${subtotal.toLocaleString()}`;
+    document.getElementById('totalDuration').textContent = `${totalDuration} min`;
+    document.getElementById('totalAmount').textContent = `KES ${subtotal.toLocaleString()}`;
+}
+
+function removeService(serviceId) {
+    toggleService(serviceId);
+}
+
+function clearAllServices() {
+    if (confirm('Remove all selected services?')) {
+        selectedServices.clear();
+        document.querySelectorAll('.service-card').forEach(card => {
+            card.classList.remove('border-primary', 'bg-light');
+        });
+        document.querySelectorAll('input[name="services"]').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+
+        updateServiceSummary();
+        updateOrderSummary();
+        validateStep2();
+    }
+}
+
+// Staff assignment
+function updateStaffAssignment() {
+    const container = document.getElementById('staffAssignmentList');
+
+    if (selectedServices.size === 0) {
+        container.innerHTML = `
+            <div class="text-muted">
+                <i class="bi bi-info-circle me-2"></i>
+                Select services first, then assign staff
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    let staffIndex = 0;
+
+    selectedServices.forEach((service, serviceId) => {
+        html += `
+            <div class="mb-3 p-3 border rounded">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <strong>${service.name}</strong>
+                    <span class="badge bg-primary">KES ${service.price.toLocaleString()}</span>
+                </div>
+
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bi bi-person"></i>
+                    </span>
+                    <select class="form-select" name="staff_${serviceId}" id="staff_${serviceId}">
+                        <option value="">Select Staff Member</option>
+                        <option value="auto">Auto-assign</option>
+                        <!-- Staff options would be loaded via API -->
+                        <option value="1">John Doe (Available)</option>
+                        <option value="2">Jane Smith (Busy)</option>
+                        <option value="3">Mike Johnson (Available)</option>
+                    </select>
+                </div>
+            </div>
+        `;
+        staffIndex++;
+    });
+
+    container.innerHTML = html;
+}
+
+// Step navigation
+function nextStep(step) {
+    if (!validateCurrentStep()) {
+        return;
+    }
+
+    // Hide current step
+    document.getElementById(`step${currentStep}`).classList.add('d-none');
+
+    // Show next step
+    document.getElementById(`step${step}`).classList.remove('d-none');
+
+    // Update progress
+    currentStep = step;
+    updateStepProgress();
+
+    // Update title
+    const titles = {
+        1: 'Step 1: Vehicle Information',
+        2: 'Step 2: Service Selection',
+        3: 'Step 3: Staff Assignment & Notes'
+    };
+    document.getElementById('stepTitle').textContent = titles[step];
+
+    // Focus appropriate field
+    if (step === 2) {
+        // Focus on first service card
+        document.querySelector('.service-card')?.focus();
+    } else if (step === 3) {
+        // Focus on staff assignment
+        document.querySelector('select[name^="staff_"]')?.focus();
+    }
+}
+
+function previousStep(step) {
+    // Hide current step
+    document.getElementById(`step${currentStep}`).classList.add('d-none');
+
+    // Show previous step
+    document.getElementById(`step${step}`).classList.remove('d-none');
+
+    // Update progress
+    currentStep = step;
+    updateStepProgress();
+
+    // Update title
+    const titles = {
+        1: 'Step 1: Vehicle Information',
+        2: 'Step 2: Service Selection',
+        3: 'Step 3: Staff Assignment & Notes'
+    };
+    document.getElementById('stepTitle').textContent = titles[step];
+}
+
+function updateStepProgress() {
+    const progressBar = document.getElementById('stepProgress');
+    const progress = (currentStep / 3) * 100;
+    progressBar.style.width = `${progress}%`;
+    progressBar.setAttribute('aria-valuenow', progress);
+}
+
+function validateCurrentStep() {
+    if (currentStep === 1) {
+        return validateStep1();
+    } else if (currentStep === 2) {
+        return validateStep2();
+    }
+    return true;
+}
+
+function validateStep1() {
+    const phone = document.getElementById('customerSearch').value.trim();
+    const registration = document.getElementById('registrationNumber').value.trim();
+
+    if (!phone || phone.length < 10) {
+        alert('Please enter a valid customer phone number');
+        document.getElementById('customerSearch').focus();
+        return false;
+    }
+
+    if (!registration || registration.length < 3) {
+        alert('Please enter a valid vehicle registration number');
+        document.getElementById('registrationNumber').focus();
+        return false;
+    }
+
+    return true;
+}
+
+function validateStep2() {
+    if (selectedServices.size === 0) {
+        alert('Please select at least one service');
+        return false;
+    }
+
+    return true;
+}
+
+function updateOrderSummary() {
+    // Customer
+    const customerPhone = document.getElementById('customerSearch').value;
+    const customerName = document.getElementById('customerName').value;
+    document.getElementById('summaryCustomer').textContent =
+        customerName || customerPhone || '-';
+
+    // Vehicle
+    const registration = document.getElementById('registrationNumber').value;
+    const make = document.getElementById('vehicleMake').value;
+    const model = document.getElementById('vehicleModel').value;
+    document.getElementById('summaryVehicle').textContent =
+        `${registration} (${make} ${model || ''})`.trim();
+
+    // Services
+    document.getElementById('summaryServicesCount').textContent = selectedServices.size;
+
+    // Duration and total
+    let totalDuration = 0;
+    let totalCost = 0;
+
+    selectedServices.forEach(service => {
+        totalDuration += service.duration;
+        totalCost += service.price;
+    });
+
+    document.getElementById('summaryDuration').textContent = `${totalDuration} min`;
+    document.getElementById('summaryTotal').textContent = `KES ${totalCost.toLocaleString()}`;
+
+    // Priority
+    const priority = document.querySelector('input[name="priority"]:checked')?.value || 'normal';
+    document.getElementById('summaryPriority').textContent = priority.charAt(0).toUpperCase() + priority.slice(1);
+
+    // Enable submit button
+    document.getElementById('submitBtn').disabled = false;
+}
+
+// Form submission
+document.getElementById('newOrderForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    if (!validateCurrentStep()) {
+        return;
+    }
+
+    // Show loading
+    document.getElementById('loadingOverlay').classList.remove('d-none');
+
+    // Prepare order data
+    const orderData = prepareOrderData();
+
+    try {
+        const response = await SpotApp.apiCall('/orders', 'POST', orderData);
+
+        if (response.success) {
+            // Show success modal
+            showSuccessModal(response.data.order);
+
+            // Clear form
+            this.reset();
+            resetFormState();
+        } else {
+            alert('Error creating order: ' + response.error.message);
+        }
+    } catch (error) {
+        console.error('Order creation error:', error);
+        alert('Error creating order. Please try again.');
+    } finally {
+        document.getElementById('loadingOverlay').classList.add('d-none');
+    }
+});
+
+function prepareOrderData() {
+    // Customer data
+    const customerPhone = document.getElementById('customerSearch').value.trim();
+    const customerName = document.getElementById('customerName').value.trim();
+    const customerEmail = document.getElementById('customerEmail').value.trim();
+
+    // Vehicle data
+    const registration = document.getElementById('registrationNumber').value.trim();
+    const make = document.getElementById('vehicleMake').value.trim();
+    const model = document.getElementById('vehicleModel').value.trim();
+    const color = document.getElementById('vehicleColor').value.trim();
+
+    // Services data
+    const services = [];
+    selectedServices.forEach((service, serviceId) => {
+        const staffSelect = document.getElementById(`staff_${serviceId}`);
+        const staffId = staffSelect?.value === 'auto' ? null : parseInt(staffSelect?.value) || null;
+
+        services.push({
+            service_id: serviceId,
+            price: service.price,
+            assigned_staff_id: staffId
+        });
+    });
+
+    // Notes and priority
+    const notes = document.getElementById('orderNotes').value.trim();
+    const priority = document.querySelector('input[name="priority"]:checked')?.value || 'normal';
+
+    return {
+        customer_phone: customerPhone,
+        customer_name: customerName,
+        customer_email: customerEmail,
+        registration_number: registration,
+        vehicle_make: make,
+        vehicle_model: model,
+        vehicle_color: color,
+        services: services,
+        notes: notes,
+        priority: priority,
+        auto_assign: document.getElementById('autoAssign').checked
+    };
+}
+
+function showSuccessModal(order) {
+    document.getElementById('orderNumber').textContent = `Order #${order.order_number}`;
+
+    const modal = new bootstrap.Modal(document.getElementById('successModal'));
+    modal.show();
+
+    // Store order data for printing
+    window.currentOrder = order;
+}
+
+function printTicket() {
+    // Close modal first
+    bootstrap.Modal.getInstance(document.getElementById('successModal')).hide();
+
+    // Implement ticket printing
+    window.print();
+}
+
+function addAnotherOrder() {
+    // Close modal and reset form
+    bootstrap.Modal.getInstance(document.getElementById('successModal')).hide();
+
+    // Reset form but keep customer data for quick entry
+    resetFormState();
+    currentStep = 1;
+    document.getElementById('step2').classList.add('d-none');
+    document.getElementById('step3').classList.add('d-none');
+    document.getElementById('step1').classList.remove('d-none');
+
+    // Clear vehicle and services, keep customer
+    document.getElementById('registrationNumber').value = '';
+    document.getElementById('vehicleMake').value = '';
+    document.getElementById('vehicleModel').value = '';
+    document.getElementById('vehicleColor').value = '';
+
+    selectedServices.clear();
+    updateServiceSummary();
+    updateOrderSummary();
+
+    // Focus on registration
+    document.getElementById('registrationNumber').focus();
+}
+
+function viewQueue() {
+    window.location.href = '/queue';
+}
+
+// Utility functions
+function resetFormState() {
+    selectedServices.clear();
+    customerData = null;
+    vehicleData = null;
+    currentStep = 1;
+
+    // Clear UI
+    updateServiceSummary();
+    updateStaffAssignment();
+    updateOrderSummary();
+    updateStepProgress();
+    document.querySelectorAll('.service-card').forEach(card => {
+        card.classList.remove('border-primary', 'bg-light');
+    });
+}
+
+function addQuickNote(note) {
+    const notesField = document.getElementById('orderNotes');
+    if (notesField.value) {
+        notesField.value += '\n';
+    }
+    notesField.value += note;
+}
+
+function cameraCapture() {
+    // Placeholder for camera functionality
+    alert('Camera capture would be implemented here. This would use the device camera to scan registration numbers.');
+}
+
+function voiceInput() {
+    // Placeholder for voice input
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        alert('Voice input would be implemented here. This would use Web Speech API to capture registration numbers.');
+    } else {
+        alert('Voice input is not supported in your browser.');
+    }
+}
+
+function setupFormValidation() {
+    const form = document.getElementById('newOrderForm');
+
+    // Add Bootstrap validation
+    form.addEventListener('submit', function(e) {
+        if (!form.checkValidity()) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    });
+}
+
+function setupAutoSave() {
+    // Auto-save form data every 30 seconds
+    setInterval(() => {
+        const formData = {
+            customer_phone: document.getElementById('customerSearch').value,
+            customer_name: document.getElementById('customerName').value,
+            registration_number: document.getElementById('registrationNumber').value,
+            vehicle_make: document.getElementById('vehicleMake').value,
+            vehicle_model: document.getElementById('vehicleModel').value,
+            selected_services: Array.from(selectedServices.keys()),
+            current_step: currentStep
+        };
+
+        localStorage.setItem('orderDraft', JSON.stringify(formData));
+    }, 30000);
+
+    // Restore draft on load
+    const draft = localStorage.getItem('orderDraft');
+    if (draft) {
+        const formData = JSON.parse(draft);
+        if (confirm('Restore previous order draft?')) {
+            // Restore form fields
+            document.getElementById('customerSearch').value = formData.customer_phone || '';
+            document.getElementById('customerName').value = formData.customer_name || '';
+            document.getElementById('registrationNumber').value = formData.registration_number || '';
+            document.getElementById('vehicleMake').value = formData.vehicle_make || '';
+            document.getElementById('vehicleModel').value = formData.vehicle_model || '';
+
+            // Restore step
+            if (formData.current_step && formData.current_step > 1) {
+                nextStep(formData.current_step);
+            }
+        }
+
+        // Clear draft
+        localStorage.removeItem('orderDraft');
+    }
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // Ctrl/Cmd + Enter to submit
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('submitBtn').click();
+    }
+
+    // Ctrl/Cmd + N for new customer
+    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        showNewCustomerSection();
+    }
+
+    // Escape to cancel
+    if (e.key === 'Escape') {
+        if (confirm('Cancel order creation? All data will be lost.')) {
+            window.history.back();
+        }
+    }
+});
+
+// Auto-format registration on input
+document.getElementById('registrationNumber').addEventListener('input', function(e) {
+    formatRegistrationNumber();
+});
+
+// Search customer on Enter
+document.getElementById('customerSearch').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        searchCustomer();
+    }
+});
+</script>
+
+<style>
+/* Service card styles */
+.service-card {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.service-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.25rem 0.5rem rgba(0,0,0,0.15);
+}
+
+.service-card.selected,
+.service-card.border-primary {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+}
+
+.service-icon {
+    height: 40px;
+}
+
+/* Step progress */
+.progress {
+    background-color: rgba(255,255,255,0.3);
+}
+
+/* Loading overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    .service-card {
+        margin-bottom: 0.5rem;
+    }
+
+    .service-card .card-body {
+        padding: 1rem;
+    }
+
+    .btn-lg {
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .navbar,
+    .btn,
+    .loading-overlay,
+    .modal {
+        display: none !important;
+    }
+
+    .card {
+        box-shadow: none;
+        border: 1px solid #000;
+    }
+}
+</style>
+{% endblock %}

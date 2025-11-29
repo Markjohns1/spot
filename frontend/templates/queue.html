@@ -1,0 +1,1294 @@
+{% extends "base.html" %}
+
+{% block title %}Service Queue - The Spot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <!-- Queue Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">Active Service Queue</h1>
+                    <p class="text-muted mb-0">
+                        <span id="queueLength" class="badge bg-primary me-2">{{ orders|length }}</span>
+                        vehicles currently being serviced
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button onclick="refreshQueue()" class="btn btn-outline-primary" id="refreshBtn">
+                        <i class="bi bi-arrow-clockwise"></i>
+                        <span class="d-none d-md-inline ms-2">Refresh</span>
+                    </button>
+                    {% if current_user.role in ['admin', 'manager'] %}
+                    <a href="{{ url_for('main.new_order') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i>
+                        <span class="d-none d-md-inline ms-2">New Order</span>
+                    </a>
+                    {% endif %}
+                    <div class="btn-group">
+                        <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="bi bi-filter"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="filterQueue('all')">All Orders</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="filterQueue('pending')">Pending Only</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="filterQueue('in_progress')">In Progress Only</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="filterQueue('my_orders')">My Orders</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="filterQueue('overdue')">Overdue</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row g-2 mb-4 d-lg-none">
+        <div class="col-6">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body text-center p-2">
+                    <div class="h4 mb-0" id="mobileQueueLength">{{ orders|length }}</div>
+                    <small>In Queue</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body text-center p-2">
+                    <div class="h4 mb-0" id="mobileInProgressCount">{{ orders|selectattr('status', 'in_progress')|list|length }}</div>
+                    <small>In Progress</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Queue Controls -->
+    <div class="row mb-4 d-none">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label text-muted small">Auto Refresh</label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="autoRefresh" checked>
+                                    <label class="form-check-label" for="autoRefresh">
+                                        <small>Update every 15 seconds</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label text-muted small">Sort By</label>
+                                <select class="form-select form-select-sm" id="sortBy" onchange="sortQueue()">
+                                    <option value="created_at">Time Added</option>
+                                    <option value="started_at">Time Started</option>
+                                    <option value="priority">Priority Level</option>
+                                    <option value="total_amount">Order Value</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label text-muted small">View Mode</label>
+                                <div class="btn-group btn-group-sm w-100">
+                                    <input type="radio" class="btn-check" name="viewMode" id="cardView" value="card" checked>
+                                    <label class="btn btn-outline-primary" for="cardView">
+                                        <i class="bi bi-grid-3x3-gap"></i>
+                                    </label>
+
+                                    <input type="radio" class="btn-check" name="viewMode" id="listView" value="list">
+                                    <label class="btn btn-outline-primary" for="listView">
+                                        <i class="bi bi-list-ul"></i>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label text-muted small">Export</label>
+                                <button onclick="exportQueue()" class="btn btn-outline-secondary btn-sm w-100">
+                                    <i class="bi bi-download"></i> Export
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Queue Display -->
+    <div class="row" id="queueContainer">
+        {% if orders %}
+            {% for order in orders %}
+            <div class="col-12 col-lg-6 col-xl-4 mb-3 queue-item" data-order-id="{{ order.id }}"
+                 data-status="{{ order.status }}" data-created="{{ order.created_at.isoformat() }}"
+                 data-priority="{{ order.notes and 'VIP' in order.notes or 'Urgent' in order.notes }}">
+                <!-- Card View -->
+                <div class="card queue-card h-100 border-start-4 {{ 'border-start-warning' if order.status == 'pending' else 'border-start-info' if order.status == 'in_progress' else 'border-start-success' }}"
+                     data-order-id="{{ order.id }}">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <h6 class="card-title mb-0 fw-bold">{{ order.order_number }}</h6>
+                            {% if order.notes and ('VIP' in order.notes or 'Urgent' in order.notes) %}
+                                <span class="badge bg-{{ 'danger' if 'Urgent' in order.notes else 'warning' }} ms-2">
+                                    {{ 'URGENT' if 'Urgent' in order.notes else 'VIP' }}
+                                </span>
+                            {% endif %}
+                        </div>
+                        <div class="queue-actions d-flex gap-1">
+                            {% if current_user.role in ['admin', 'manager'] %}
+                            <button class="btn btn-sm btn-{{ 'success' if order.status == 'pending' else 'warning' }}"
+                                    onclick="updateOrderStatus({{ order.id }}, '{{ 'in_progress' if order.status == 'pending' else 'completed' }}')"
+                                    title="{{ 'Start Order' if order.status == 'pending' else 'Mark Complete' }}">
+                                <i class="bi bi-{{ 'play-fill' if order.status == 'pending' else 'check-circle-fill' }}"></i>
+                            </button>
+                            {% endif %}
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewOrderDetails({{ order.id }})"
+                                    title="View Details">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-3">
+                        <!-- Vehicle Info -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="d-flex align-items-center">
+                                    <div class="vehicle-icon me-2">
+                                        {% if order.vehicle and order.vehicle.make %}
+                                            <i class="bi bi-car-front text-primary fs-4"></i>
+                                        {% else %}
+                                            <i class="bi bi-question-circle text-muted fs-4"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <div class="fw-medium">
+                                            {% if order.vehicle %}
+                                                {{ order.vehicle.registration_number }}
+                                            {% else %}
+                                                Unknown Vehicle
+                                            {% endif %}
+                                        </div>
+                                        <small class="text-muted">
+                                            {% if order.vehicle.make %}
+                                                {{ order.vehicle.make }} {{ order.vehicle.model or '' }}
+                                            {% else %}
+                                                No vehicle info
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Customer Info -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        {% if order.customer and order.customer.name %}
+                                            <div class="fw-medium">{{ order.customer.name }}</div>
+                                            <div class="small text-muted">{{ order.customer.phone_number }}</div>
+                                        {% elif order.customer %}
+                                            {{ order.customer.phone_number }}
+                                        {% else %}
+                                            <span class="text-muted">Walk-in Customer</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-end">
+                                        {% if order.customer and order.customer.total_visits > 1 %}
+                                            <span class="badge bg-info">
+                                                {{ order.customer.total_visits }} visits
+                                            </span>
+                                        {% elif order.customer and order.customer.total_visits == 1 %}
+                                            <span class="badge bg-secondary">
+                                                New Customer
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Services -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="service-badges">
+                                    {% for os in order.order_services[:3] %}
+                                    <span class="badge bg-light text-dark me-1" title="{{ os.service.description or os.service.name }}">
+                                        {{ os.service.name }}
+                                        {% if os.assigned_staff %}
+                                            <small class="text-muted">({{ os.assigned_staff.full_name.split(' ')[0] }})</small>
+                                        {% endif %}
+                                    </span>
+                                    {% endfor %}
+                                    {% if order.order_services|length > 3 %}
+                                    <span class="badge bg-secondary">+{{ order.order_services|length - 3 }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status and Progress -->
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-circle-fill me-2 text-{{ 'warning' if order.status == 'pending' else 'info' if order.status == 'in_progress' else 'success' }}"></i>
+                                    <div>
+                                        <div class="fw-medium">{{ order.status.replace('_', ' ').title() }}</div>
+                                        {% if order.started_at %}
+                                        <small class="text-muted">Started: {{ order.started_at.strftime('%H:%M') }}</small>
+                                        {% else %}
+                                        <small class="text-muted">Added: {{ order.created_at.strftime('%H:%M') }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-end">
+                                    <div class="fw-bold text-primary">KES {{ "{:,}".format(order.total_amount|float) }}</div>
+                                    <small class="text-muted">Total</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Assigned Staff -->
+                        {% if order.order_services %}
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <small class="text-muted">Assigned to:</small>
+                                        <div class="staff-chips">
+                                            {% set assigned_staff = [] %}
+                                            {% for os in order.order_services %}
+                                                {% if os.assigned_staff and os.assigned_staff.id not in assigned_staff %}
+                                                    <span class="badge bg-light text-dark me-1">
+                                                        {{ os.assigned_staff.full_name.split(' ')[0] }}
+                                                    </span>
+                                                    {% set _ = assigned_staff.append(os.assigned_staff.id) %}
+                                                {% endif %}
+                                            {% endfor %}
+                                            {% if not assigned_staff %}
+                                                <span class="text-muted small">No staff assigned</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        {% if order.order_services|selectattr('status', 'completed')|list|length > 0 %}
+                                        <small class="text-success">
+                                            {{ order.order_services|selectattr('status', 'completed')|list|length }}/{{ order.order_services|length }} done
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Progress Bar -->
+                        {% if order.order_services|length > 0 %}
+                        <div class="row mb-2">
+                            <div class="col-12">
+                                <div class="progress" style="height: 8px;">
+                                    {% set completed_count = order.order_services|selectattr('status', 'completed')|list|length %}
+                                    {% set total_count = order.order_services|length %}
+                                    <div class="progress-bar bg-{{ 'success' if completed_count == total_count else 'info' }}"
+                                         style="width: {{ (completed_count / total_count * 100)|round }}%"></div>
+                                </div>
+                                <small class="text-muted">
+                                    {{ completed_count }} of {{ total_count }} services completed
+                                </small>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Card Footer -->
+                    <div class="card-footer bg-transparent border-0 pt-0">
+                        <div class="row align-items-center">
+                            <div class="col-6">
+                                <small class="text-muted">
+                                    <i class="bi bi-clock me-1"></i>
+                                    {% if order.started_at %}
+                                        {% set duration = (now - order.started_at).total_seconds() // 60 %}
+                                        {{ duration|int }} min active
+                                    {% else %}
+                                        Waiting for {{ (now - order.created_at).total_seconds() // 60 }} min
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="col-6 text-end">
+                                <div class="btn-group btn-group-sm">
+                                    {% if current_user.role in ['admin', 'manager'] %}
+                                    <button class="btn btn-outline-success" onclick="quickPayment({{ order.id }})"
+                                            title="Record Payment">
+                                        <i class="bi bi-cash-stack"></i>
+                                    </button>
+                                    {% endif %}
+                                    <button class="btn btn-outline-primary" onclick="printOrder({{ order.id }})"
+                                            title="Print Ticket">
+                                        <i class="bi bi-printer"></i>
+                                    </button>
+                                    {% if current_user.role == 'admin' %}
+                                    <button class="btn btn-outline-danger" onclick="cancelOrder({{ order.id }})"
+                                            title="Cancel Order">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mobile Swipe Actions -->
+                <div class="mobile-swipe-actions d-lg-none">
+                    <div class="swipe-left swipe-action" onclick="markComplete({{ order.id }})">
+                        <i class="bi bi-check-circle-fill"></i>
+                        Complete
+                    </div>
+                    {% if current_user.role in ['admin', 'manager'] %}
+                    <div class="swipe-right swipe-action" onclick="startOrder({{ order.id }})"
+                            {% if order.status == 'in_progress' %}style="display: none;"{% endif %}>
+                        <i class="bi bi-play-circle-fill"></i>
+                        Start
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <!-- Empty Queue -->
+        <div class="col-12">
+            <div class="card text-center py-5">
+                <div class="card-body">
+                    <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
+                    <h4 class="text-success mt-3 mb-2">All Caught Up!</h4>
+                    <p class="text-muted mb-4">
+                        No active orders in the queue. All vehicles have been serviced.
+                    </p>
+
+                    <div class="row justify-content-center g-2">
+                        {% if current_user.role in ['admin', 'manager'] %}
+                        <div class="col-6 col-md-3">
+                            <a href="{{ url_for('main.new_order') }}" class="btn btn-primary w-100">
+                                <i class="bi bi-plus-circle d-block mb-2"></i>
+                                New Order
+                            </a>
+                        </div>
+                        {% endif %}
+                        <div class="col-6 col-md-3">
+                            <a href="{{ url_for('main.reports') }}" class="btn btn-outline-info w-100">
+                                <i class="bi bi-graph-up d-block mb-2"></i>
+                                View Reports
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <a href="{{ url_for('main.customers') }}" class="btn btn-outline-secondary w-100">
+                                <i class="bi bi-people d-block mb-2"></i>
+                                Customers
+                            </a>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <button onclick="refreshQueue()" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-arrow-clockwise d-block mb-2"></i>
+                                Refresh Queue
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <small class="text-muted">
+                            Last updated: <span id="lastRefresh">{{ now.strftime('%H:%M:%S') }}</span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Queue Summary (Desktop) -->
+    <div class="row mt-4 d-none d-lg-flex">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h3 text-primary mb-0">{{ orders|length }}</div>
+                                <small class="text-muted">Active Orders</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h3 text-info mb-0">{{ orders|selectattr('status', 'in_progress')|list|length }}</div>
+                                <small class="text-muted">In Progress</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h3 text-warning mb-0">{{ orders|selectattr('status', 'pending')|list|length }}</div>
+                                <small class="text-muted">Pending Start</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="h3 text-success mb-0">
+                                    {% set total_value = orders|sum(attribute='total_amount') %}
+                                    KES {{ "{:,}".format(total_value|float) }}
+                                </div>
+                                <small class="text-muted">Total Value</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Order Details Modal -->
+<div class="modal fade" id="orderDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Order Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="orderDetailsContent">
+                <!-- Content will be loaded via AJAX -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                {% if current_user.role in ['admin', 'manager'] %}
+                <button type="button" class="btn btn-primary" id="editOrderBtn">Edit Order</button>
+                {% endif %}
+                <button type="button" class="btn btn-info" id="printOrderBtn">Print Ticket</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Payment Modal -->
+<div class="modal fade" id="quickPaymentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Record Payment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="quickPaymentForm">
+                    <input type="hidden" id="paymentOrderId" name="order_id">
+
+                    <div class="form-group mb-3">
+                        <label for="paymentAmount" class="form-label">Amount Due</label>
+                        <div class="input-group">
+                            <span class="input-group-text">KES</span>
+                            <input type="number" class="form-control form-control-lg" id="paymentAmount"
+                                   name="amount" step="0.01" min="0" required>
+                        </div>
+                        <small class="form-text text-muted">Enter amount received</small>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="paymentMethod" class="form-label">Payment Method</label>
+                        <select class="form-select form-select-lg" id="paymentMethod" name="payment_method" required>
+                            <option value="">Select Method</option>
+                            <option value="cash">Cash</option>
+                            <option value="mpesa">M-Pesa</option>
+                            <option value="airtel">Airtel Money</option>
+                            <option value="card">Card</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group mb-3" id="paymentReferenceGroup">
+                        <label for="paymentReference" class="form-label">Transaction Reference</label>
+                        <input type="text" class="form-control" id="paymentReference" name="transaction_reference"
+                               placeholder="Enter transaction ID/number">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="paymentNotes" class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" id="paymentNotes" name="notes" rows="3"
+                                  placeholder="Any additional notes..."></textarea>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <span id="paymentChangeAmount">Change: KES 0</span>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="recordPaymentBtn">Record Payment</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let refreshInterval;
+let currentFilter = 'all';
+let currentSort = 'created_at';
+let currentViewMode = 'card';
+
+// Initialize queue page
+document.addEventListener('DOMContentLoaded', function() {
+    initializeQueue();
+    setupAutoRefresh();
+    setupTouchGestures();
+    updateQueueStats();
+});
+
+function initializeQueue() {
+    // Setup view mode toggle
+    document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            currentViewMode = this.value;
+            applyViewMode();
+        });
+    });
+
+    // Setup search/filter
+    document.getElementById('sortBy')?.addEventListener('change', sortQueue);
+
+    // Initial view mode
+    applyViewMode();
+}
+
+function setupAutoRefresh() {
+    const autoRefreshCheckbox = document.getElementById('autoRefresh');
+    if (autoRefreshCheckbox) {
+        autoRefreshCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                startAutoRefresh();
+            } else {
+                stopAutoRefresh();
+            }
+        });
+
+        // Start auto-refresh if checked
+        if (autoRefreshCheckbox.checked) {
+            startAutoRefresh();
+        }
+    }
+}
+
+function startAutoRefresh() {
+    // Refresh every 15 seconds
+    refreshInterval = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+            refreshQueue(false); // Silent refresh
+        }
+    }, 15000);
+}
+
+function stopAutoRefresh() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+    }
+}
+
+function refreshQueue(showLoading = true) {
+    const refreshBtn = document.getElementById('refreshBtn');
+
+    if (showLoading) {
+        refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise rotating"></i> <span class="d-none d-md-inline ms-2">Refreshing...</span>';
+        refreshBtn.disabled = true;
+    }
+
+    fetch('/api/queue')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateQueueDisplay(data.data.queue);
+                updateLastRefreshTime();
+            } else {
+                console.error('Queue refresh error:', data.error);
+                SpotApp.showToast('Failed to refresh queue', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Queue refresh error:', error);
+            SpotApp.showToast('Network error while refreshing', 'error');
+        })
+        .finally(() => {
+            if (showLoading) {
+                refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> <span class="d-none d-md-inline ms-2">Refresh</span>';
+                refreshBtn.disabled = false;
+            }
+        });
+}
+
+function updateQueueDisplay(queue) {
+    // This would typically rebuild the queue HTML
+    // For now, we'll just update stats
+    updateQueueStats(queue);
+}
+
+function updateQueueStats(queue = null) {
+    if (!queue) {
+        queue = Array.from(document.querySelectorAll('.queue-item'));
+    }
+
+    const pendingCount = queue.filter(item =>
+        item.dataset.status === 'pending'
+    ).length;
+
+    const inProgressCount = queue.filter(item =>
+        item.dataset.status === 'in_progress'
+    ).length;
+
+    // Update stats
+    const queueLengthElement = document.getElementById('queueLength');
+    if (queueLengthElement) {
+        queueLengthElement.textContent = queue.length;
+    }
+
+    const mobileQueueElement = document.getElementById('mobileQueueLength');
+    if (mobileQueueElement) {
+        mobileQueueElement.textContent = queue.length;
+    }
+
+    const mobileProgressElement = document.getElementById('mobileInProgressCount');
+    if (mobileProgressElement) {
+        mobileProgressElement.textContent = inProgressCount;
+    }
+}
+
+function updateLastRefreshTime() {
+    const lastRefreshElement = document.getElementById('lastRefresh');
+    if (lastRefreshElement) {
+        lastRefreshElement.textContent = new Date().toLocaleTimeString();
+    }
+}
+
+function filterQueue(filter) {
+    currentFilter = filter;
+    const items = document.querySelectorAll('.queue-item');
+
+    items.forEach(item => {
+        let show = false;
+
+        switch (filter) {
+            case 'all':
+                show = true;
+                break;
+            case 'pending':
+                show = item.dataset.status === 'pending';
+                break;
+            case 'in_progress':
+                show = item.dataset.status === 'in_progress';
+                break;
+            case 'my_orders':
+                show = item.classList.contains('my-order');
+                break;
+            case 'overdue':
+                const createdTime = new Date(item.dataset.created);
+                const now = new Date();
+                const hoursDiff = (now - createdTime) / (1000 * 60 * 60);
+                show = hoursDiff > 4; // Over 4 hours
+                break;
+        }
+
+        item.style.display = show ? 'block' : 'none';
+    });
+
+    updateQueueStats();
+}
+
+function sortQueue() {
+    const sortBy = document.getElementById('sortBy').value;
+    const container = document.getElementById('queueContainer');
+    const items = Array.from(container.querySelectorAll('.queue-item'));
+
+    items.sort((a, b) => {
+        let aVal, bVal;
+
+        switch (sortBy) {
+            case 'created_at':
+                aVal = new Date(a.dataset.created);
+                bVal = new Date(b.dataset.created);
+                break;
+            case 'priority':
+                aVal = a.dataset.priority === 'true' ? 1 : 0;
+                bVal = b.dataset.priority === 'true' ? 1 : 0;
+                break;
+            case 'total_amount':
+                aVal = parseFloat(a.dataset.amount) || 0;
+                bVal = parseFloat(b.dataset.amount) || 0;
+                break;
+            default:
+                aVal = new Date(a.dataset.created);
+                bVal = new Date(b.dataset.created);
+        }
+
+        return sortBy.includes('priority') ? bVal - aVal : aVal - bVal;
+    });
+
+    // Re-append sorted items
+    items.forEach(item => container.appendChild(item));
+}
+
+function applyViewMode() {
+    const container = document.getElementById('queueContainer');
+
+    if (currentViewMode === 'list') {
+        container.classList.add('list-view');
+    } else {
+        container.classList.remove('list-view');
+    }
+}
+
+function updateOrderStatus(orderId, newStatus) {
+    const action = newStatus === 'in_progress' ? 'start' : 'finish';
+    const actionUrl = `/api/orders/${orderId}/${action}`;
+
+    if (!confirm(`Are you sure you want to ${action} this order?`)) {
+        return;
+    }
+
+    fetch(actionUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            SpotApp.showToast(`Order ${action}d successfully`, 'success');
+            refreshQueue();
+        } else {
+            SpotApp.showToast(data.error.message || `Failed to ${action} order`, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Status update error:', error);
+        SpotApp.showToast(`Failed to ${action} order`, 'error');
+    });
+}
+
+function viewOrderDetails(orderId) {
+    fetch(`/api/orders/${orderId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showOrderDetailsModal(data.data.order);
+            } else {
+                SpotApp.showToast('Failed to load order details', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Order details error:', error);
+            SpotApp.showToast('Error loading order details', 'error');
+        });
+}
+
+function showOrderDetailsModal(order) {
+    const modal = document.getElementById('orderDetailsModal');
+    const content = document.getElementById('orderDetailsContent');
+
+    // Build order details HTML
+    let html = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Order Information</h6>
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>Order Number:</strong></td>
+                        <td>${order.order_number}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Status:</strong></td>
+                        <td><span class="badge bg-${getStatusBadgeClass(order.status)}">${order.status.replace('_', ' ').title()}</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Created:</strong></td>
+                        <td>${new Date(order.created_at).toLocaleString()}</td>
+                    </tr>
+                    ${order.started_at ? `<tr><td><strong>Started:</strong></td><td>${new Date(order.started_at).toLocaleString()}</td></tr>` : ''}
+                    <tr>
+                        <td><strong>Total Amount:</strong></td>
+                        <td class="text-success fw-bold">KES ${order.total_amount.toLocaleString()}</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6>Customer Information</h6>
+                <table class="table table-sm">
+                    ${order.customer ? `
+                        <tr>
+                            <td><strong>Name:</strong></td>
+                            <td>${order.customer.name || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Phone:</strong></td>
+                            <td>${order.customer.phone_number}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Total Visits:</strong></td>
+                            <td>${order.customer.total_visits}</td>
+                        </tr>
+                    ` : `
+                        <tr>
+                            <td colspan="2" class="text-muted">Walk-in Customer</td>
+                        </tr>
+                    `}
+                </table>
+
+                ${order.vehicle ? `
+                    <h6 class="mt-3">Vehicle Information</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Registration:</strong></td>
+                            <td>${order.vehicle.registration_number}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Make:</strong></td>
+                            <td>${order.vehicle.make || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Model:</strong></td>
+                            <td>${order.vehicle.model || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Color:</strong></td>
+                            <td>${order.vehicle.color || 'N/A'}</td>
+                        </tr>
+                    </table>
+                ` : ''}
+            </div>
+        </div>
+    `;
+
+    if (order.order_services && order.order_services.length > 0) {
+        html += `
+            <h6 class="mt-4">Services</h6>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Service</th>
+                            <th>Price</th>
+                            <th>Staff</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${order.order_services.map(service => `
+                            <tr>
+                                <td>${service.service.name}</td>
+                                <td>KES ${service.price_charged.toLocaleString()}</td>
+                                <td>${service.assigned_staff ? service.assigned_staff.full_name : 'Not assigned'}</td>
+                                <td><span class="badge bg-${getStatusBadgeClass(service.status)}">${service.status.replace('_', ' ').title()}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    content.innerHTML = html;
+
+    // Setup modal buttons
+    document.getElementById('editOrderBtn').onclick = () => {
+        window.location.href = `/orders/${orderId}/edit`;
+    };
+
+    document.getElementById('printOrderBtn').onclick = () => {
+        printOrder(orderId);
+    };
+
+    // Show modal
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+}
+
+function quickPayment(orderId) {
+    document.getElementById('paymentOrderId').value = orderId;
+
+    const modal = new bootstrap.Modal(document.getElementById('quickPaymentModal'));
+    modal.show();
+}
+
+function setupPaymentForm() {
+    const amountInput = document.getElementById('paymentAmount');
+    const methodSelect = document.getElementById('paymentMethod');
+    const referenceGroup = document.getElementById('paymentReferenceGroup');
+    const changeAmount = document.getElementById('paymentChangeAmount');
+
+    methodSelect.addEventListener('change', function() {
+        const needsReference = ['mpesa', 'airtel', 'card'].includes(this.value);
+        referenceGroup.style.display = needsReference ? 'block' : 'none';
+    });
+
+    amountInput.addEventListener('input', function() {
+        if (methodSelect.value === 'cash') {
+            // Calculate change (assuming exact amount is due)
+            const change = Math.max(0, parseFloat(this.value) - 0);
+            changeAmount.textContent = `Change: KES ${change.toLocaleString()}`;
+        } else {
+            changeAmount.textContent = 'Change: KES 0';
+        }
+    });
+}
+
+function recordPayment() {
+    const form = document.getElementById('quickPaymentForm');
+    const formData = new FormData(form);
+
+    if (!form.checkValidity()) {
+        form.classList.add('was-validated');
+        return;
+    }
+
+    fetch('/api/payments', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({
+            order_id: parseInt(formData.get('order_id')),
+            amount: parseFloat(formData.get('amount')),
+            payment_method: formData.get('payment_method'),
+            transaction_reference: formData.get('transaction_reference'),
+            notes: formData.get('notes')
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            SpotApp.showToast('Payment recorded successfully', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('quickPaymentModal')).hide();
+            refreshQueue();
+        } else {
+            SpotApp.showToast(data.error.message || 'Failed to record payment', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Payment recording error:', error);
+        SpotApp.showToast('Failed to record payment', 'error');
+    });
+}
+
+function printOrder(orderId) {
+    // Print order ticket
+    window.print();
+}
+
+function cancelOrder(orderId) {
+    if (!confirm('Are you sure you want to cancel this order? This action cannot be undone.')) {
+        return;
+    }
+
+    fetch(`/api/orders/${orderId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            SpotApp.showToast('Order cancelled successfully', 'success');
+            refreshQueue();
+        } else {
+            SpotApp.showToast(data.error.message || 'Failed to cancel order', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Order cancellation error:', error);
+        SpotApp.showToast('Failed to cancel order', 'error');
+    });
+}
+
+function exportQueue() {
+    // Export queue data to CSV or other format
+    window.print();
+}
+
+function setupTouchGestures() {
+    const queueItems = document.querySelectorAll('.queue-item');
+
+    queueItems.forEach(item => {
+        let startX = 0;
+        let startY = 0;
+        let currentX = 0;
+        let currentY = 0;
+
+        item.addEventListener('touchstart', handleTouchStart, { passive: true });
+        item.addEventListener('touchmove', handleTouchMove, { passive: true });
+        item.addEventListener('touchend', handleTouchEnd);
+    });
+
+    function handleTouchStart(e) {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+    }
+
+    function handleTouchMove(e) {
+        currentX = e.touches[0].clientX;
+        currentY = e.touches[0].clientY;
+    }
+
+    function handleTouchEnd(e) {
+        const diffX = currentX - startX;
+        const diffY = currentY - startY;
+
+        // Only handle horizontal swipes
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+            const orderId = parseInt(e.currentTarget.dataset.orderId);
+
+            if (diffX > 0) {
+                // Swipe right - start order
+                startOrder(orderId);
+            } else {
+                // Swipe left - complete order
+                markComplete(orderId);
+            }
+        }
+    }
+}
+
+function markComplete(orderId) {
+    updateOrderStatus(orderId, 'completed');
+}
+
+function startOrder(orderId) {
+    updateOrderStatus(orderId, 'in_progress');
+}
+
+function getStatusBadgeClass(status) {
+    const classes = {
+        'pending': 'warning',
+        'in_progress': 'info',
+        'completed': 'success',
+        'cancelled': 'danger'
+    };
+    return classes[status] || 'secondary';
+}
+
+function getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+           document.querySelector('input[name="csrf_token"]')?.value || '';
+}
+
+// Setup payment form when modal is shown
+document.addEventListener('DOMContentLoaded', function() {
+    const paymentModal = document.getElementById('quickPaymentModal');
+    if (paymentModal) {
+        paymentModal.addEventListener('shown.bs.modal', setupPaymentForm);
+    }
+
+    // Setup record payment button
+    const recordBtn = document.getElementById('recordPaymentBtn');
+    if (recordBtn) {
+        recordBtn.addEventListener('click', recordPayment);
+    }
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // Ctrl/Cmd + R to refresh
+    if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+        e.preventDefault();
+        refreshQueue();
+    }
+
+    // Ctrl/Cmd + N for new order
+    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        window.location.href = '/orders/new';
+    }
+
+    // Ctrl/Cmd + P for print
+    if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        window.print();
+    }
+
+    // F5 to refresh
+    if (e.key === 'F5') {
+        e.preventDefault();
+        refreshQueue();
+    }
+});
+
+// Visibility change handling
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') {
+        // Refresh when page becomes visible
+        refreshQueue(false);
+    }
+});
+
+// Clean up on page unload
+window.addEventListener('beforeunload', function() {
+    stopAutoRefresh();
+});
+</script>
+
+<style>
+/* Queue-specific styles */
+.queue-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-left: 4px solid #dee2e6 !important;
+}
+
+.queue-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.25rem 0.5rem rgba(0,0,0,0.15);
+}
+
+.queue-card.border-start-warning {
+    border-left-color: #ffc107 !important;
+}
+
+.queue-card.border-start-info {
+    border-left-color: #17a2b8 !important;
+}
+
+.queue-card.border-start-success {
+    border-left-color: #28a745 !important;
+}
+
+/* Mobile swipe actions */
+.mobile-swipe-actions {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1rem;
+    pointer-events: none;
+}
+
+.swipe-action {
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    font-weight: bold;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.3s ease;
+}
+
+.queue-item:active .swipe-action {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.swipe-left {
+    background: #28a745;
+}
+
+.swipe-right {
+    background: #17a2b8;
+}
+
+/* List view styles */
+#queueContainer.list-view .queue-item {
+    margin-bottom: 0.5rem;
+}
+
+#queueContainer.list-view .queue-card {
+    border-radius: 0.5rem;
+}
+
+/* Progress bar styles */
+.progress {
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    transition: width 0.6s ease;
+}
+
+/* Mobile optimizations */
+@media (max-width: 767.98px) {
+    .queue-item {
+        position: relative;
+        margin-bottom: 0.75rem;
+    }
+
+    .queue-card {
+        margin-bottom: 0;
+    }
+
+    .queue-card .card-body {
+        padding: 1rem;
+    }
+
+    .queue-card .card-header {
+        padding: 0.75rem 1rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .navbar,
+    .btn,
+    .mobile-swipe-actions {
+        display: none !important;
+    }
+
+    .queue-card {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #dee2e6;
+        margin-bottom: 1rem;
+    }
+
+    .card-footer {
+        background-color: #f8f9fa;
+    }
+}
+
+/* Rotating icon */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.rotating {
+    animation: spin 1s linear infinite;
+}
+
+/* Staff chips */
+.staff-chips .badge {
+    font-size: 0.75rem;
+    margin-right: 0.25rem;
+}
+
+/* Service badges */
+.service-badges .badge {
+    font-size: 0.7rem;
+    margin-right: 0.25rem;
+    margin-bottom: 0.25rem;
+    display: inline-block;
+}
+</style>
+{% endblock %}

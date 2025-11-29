@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - {% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <!-- Quick Stats Cards -->
+    <div class="row g-3 mb-4">
+        <!-- Today's Orders -->
+        <div class="col-6 col-lg-3">
+            <div class="card bg-primary text-white h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Today</h6>
+                            <h3 class="card-text mb-0">{{ stats.today_orders }}</h3>
+                            <small class="opacity-75">Orders</small>
+                        </div>
+                        <i class="bi bi-car-front fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completed Today -->
+        <div class="col-6 col-lg-3">
+            <div class="card bg-success text-white h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Done</h6>
+                            <h3 class="card-text mb-0">{{ stats.today_completed }}</h3>
+                            <small class="opacity-75">Completed</small>
+                        </div>
+                        <i class="bi bi-check-circle fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Today's Revenue -->
+        <div class="col-6 col-lg-3">
+            <div class="card bg-info text-white h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Revenue</h6>
+                            <h3 class="card-text mb-0">KES {{ "{:,.0f}".format(stats.today_revenue) }}</h3>
+                            <small class="opacity-75">Today</small>
+                        </div>
+                        <i class="bi bi-cash-stack fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Queue -->
+        <div class="col-6 col-lg-3">
+            <div class="card bg-warning text-dark h-100 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-1">Queue</h6>
+                            <h3 class="card-text mb-0">{{ stats.active_queue_length }}</h3>
+                            <small class="opacity-75">Active</small>
+                        </div>
+                        <i class="bi bi-people fs-1 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions (Mobile) -->
+    <div class="row g-2 mb-4 d-lg-none">
+        {% if current_user.role in ['admin', 'manager'] %}
+        <div class="col-6">
+            <a href="{{ url_for('main.new_order') }}" class="btn btn-primary w-100 h-100 py-3">
+                <i class="bi bi-plus-circle d-block fs-3 mb-1"></i>
+                New Order
+            </a>
+        </div>
+        {% endif %}
+        <div class="col-6">
+            <a href="{{ url_for('main.payments') }}" class="btn btn-success w-100 h-100 py-3">
+                <i class="bi bi-cash d-block fs-3 mb-1"></i>
+                Record Payment
+            </a>
+        </div>
+    </div>
+
+    <!-- Active Queue Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-list-ol me-2"></i>
+                        Active Queue
+                        <span class="badge bg-primary ms-2">{{ stats.active_orders|length }}</span>
+                    </h5>
+                    <a href="{{ url_for('main.queue') }}" class="btn btn-sm btn-outline-primary">
+                        View Full Queue
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    {% if stats.active_orders %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Order #</th>
+                                    <th>Vehicle</th>
+                                    <th>Customer</th>
+                                    <th class="d-none d-md-table-cell">Services</th>
+                                    <th class="d-none d-lg-table-cell">Assigned To</th>
+                                    <th>Status</th>
+                                    <th class="d-none d-md-table-cell">Time</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in stats.active_orders[:5] %}
+                                <tr class="queue-row" data-order-id="{{ order.id }}">
+                                    <td class="fw-bold">{{ order.order_number }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if order.vehicle %}
+                                                <span class="badge bg-secondary me-2">{{ order.vehicle.registration_number }}</span>
+                                                {% if order.vehicle.make %}
+                                                    <small class="d-none d-md-inline">{{ order.vehicle.make }}</small>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">No vehicle</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if order.customer %}
+                                            {% if order.customer.name %}
+                                                <div>{{ order.customer.name }}</div>
+                                                <small class="text-muted">{{ order.customer.phone_number }}</small>
+                                            {% else %}
+                                                {{ order.customer.phone_number }}
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">Walk-in</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="d-none d-md-table-cell">
+                                        <div class="service-badges">
+                                            {% for os in order.order_services[:3] %}
+                                                <span class="badge bg-light text-dark me-1">{{ os.service.name if os.service else 'Unknown' }}</span>
+                                            {% endfor %}
+                                            {% if order.order_services|length > 3 %}
+                                                <span class="badge bg-secondary">+{{ order.order_services|length - 3 }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="d-none d-lg-table-cell">
+                                        <div class="staff-assignments">
+                                            {% for os in order.order_services %}
+                                                {% if os.assigned_staff %}
+                                                    <div class="small">
+                                                        {% if os.service %}
+                                                            <strong>{{ os.service.name[:1] }}</strong>:
+                                                        {% endif %}
+                                                        {{ os.assigned_staff.full_name.split(' ')[0] }}
+                                                    </div>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if order.status == 'pending' %}
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                        {% elif order.status == 'in_progress' %}
+                                            <span class="badge bg-info">In Progress</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="d-none d-md-table-cell">
+                                        <small class="text-muted">
+                                            {% if order.started_at %}
+                                                {{ order.started_at.strftime('%H:%M') }}
+                                            {% else %}
+                                                {{ order.created_at.strftime('%H:%M') }}
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary btn-sm"
+                                                    onclick="viewOrder({{ order.id }})"
+                                                    title="View Order">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            {% if current_user.role in ['admin', 'manager'] %}
+                                            <button class="btn btn-outline-success btn-sm"
+                                                    onclick="quickStart({{ order.id }})"
+                                                    title="Start Order"
+                                                    {% if order.status == 'in_progress' %}disabled{% endif %}>
+                                                <i class="bi bi-play-fill"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-check-circle fs-1 d-block mb-2"></i>
+                        <p class="mb-0">No active orders in queue</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popular Services & Staff Workload -->
+    <div class="row g-3 mb-4">
+        <!-- Popular Services -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-graph-up me-2"></i>
+                        Popular Services Today
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if stats.popular_services %}
+                    <div class="row g-2">
+                        {% for service_name, count in stats.popular_services %}
+                        <div class="col-6 col-md-4">
+                            <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded">
+                                <span class="fw-medium">{{ service_name }}</span>
+                                <span class="badge bg-primary">{{ count }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3 text-muted">
+                        <i class="bi bi-bar-chart fs-3 d-block mb-2"></i>
+                        <p class="mb-0">No service data for today yet</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Staff Workload -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-people me-2"></i>
+                        Staff Workload
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if stats.staff_workload %}
+                    <div class="list-group list-group-flush">
+                        {% for staff_id, staff_name, active_services in stats.staff_workload %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <div class="fw-medium">{{ staff_name }}</div>
+                                <small class="text-muted">Active services</small>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-{{ 'success' if active_services <= 2 else 'warning' if active_services <= 4 else 'danger' }} rounded-pill me-2">
+                                    {{ active_services }}
+                                </span>
+                                <div class="progress" style="width: 60px; height: 6px;">
+                                    <div class="progress-bar bg-{{ 'success' if active_services <= 2 else 'warning' if active_services <= 4 else 'danger' }}"
+                                         style="width: {{ (active_services / 5 * 100)|round }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3 text-muted">
+                        <i class="bi bi-person-workspace fs-3 d-block mb-2"></i>
+                        <p class="mb-0">No staff currently active</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Payments -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-cash-stack me-2"></i>
+                        Recent Payments
+                    </h5>
+                    <a href="{{ url_for('main.payments') }}" class="btn btn-sm btn-outline-primary">
+                        View All Payments
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if stats.recent_payments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Order #</th>
+                                    <th class="d-none d-md-table-cell">Customer</th>
+                                    <th>Amount</th>
+                                    <th>Method</th>
+                                    <th>Staff</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment in stats.recent_payments %}
+                                <tr>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ payment.created_at.strftime('%H:%M') }}
+                                        </small>
+                                    </td>
+                                    <td class="fw-medium">
+                                        <a href="{{ url_for('main.view_order', order_id=payment.order_id) }}"
+                                           class="text-decoration-none">
+                                            {% if payment.order %}
+                                                {{ payment.order.order_number }}
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </a>
+                                    </td>
+                                    <td class="d-none d-md-table-cell">
+                                        {% if payment.order and payment.order.customer %}
+                                            {% if payment.order.customer.name %}
+                                                {{ payment.order.customer.name }}
+                                            {% else %}
+                                                {{ payment.order.customer.phone_number }}
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="fw-bold text-success">
+                                        KES {{ "{:,.0f}".format(payment.amount) }}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">
+                                            {{ payment.get_payment_method_display_name() }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <small>{{ payment.recorder.full_name if payment.recorder else 'N/A' }}</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-cash-stack fs-1 d-block mb-2"></i>
+                        <p class="mb-0">No payments recorded today yet</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Real-time dashboard updates
+let updateInterval;
+
+function updateDashboardStats() {
+    fetch('/api/dashboard-stats')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update the stat cards
+                const stats = data.data;
+                document.querySelector('[data-stat="today-orders"]').textContent = stats.today_orders;
+                document.querySelector('[data-stat="today-revenue"]').textContent = `KES ${stats.today_revenue.toLocaleString()}`;
+                document.querySelector('[data-stat="active-queue"]').textContent = stats.active_queue;
+
+                // Update last updated time
+                document.getElementById('lastUpdated').textContent = new Date(stats.last_updated).toLocaleTimeString();
+            }
+        })
+        .catch(error => {
+            console.error('Error updating dashboard stats:', error);
+        });
+}
+
+function viewOrder(orderId) {
+    window.location.href = `/orders/${orderId}`;
+}
+
+function quickStart(orderId) {
+    if (confirm('Start this order now?')) {
+        fetch(`/api/orders/${orderId}/start`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error starting order: ' + data.error.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error starting order:', error);
+            alert('Error starting order');
+        });
+    }
+}
+
+function getCsrfToken() {
+    return document.querySelector('[name=csrf_token]')?.value || '';
+}
+
+// Initialize real-time updates
+document.addEventListener('DOMContentLoaded', function() {
+    // Update stats every 30 seconds
+    updateInterval = setInterval(updateDashboardStats, 30000);
+
+    // Initial update
+    updateDashboardStats();
+
+    // Clean up on page unload
+    window.addEventListener('beforeunload', function() {
+        if (updateInterval) {
+            clearInterval(updateInterval);
+        }
+    });
+});
+</script>
+{% endblock %}

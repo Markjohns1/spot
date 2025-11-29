@@ -8,6 +8,10 @@ import os
 from app import create_app, db
 from app.models import *
 
+basedir = os.path.abspath(os.path.dirname(__file__))
+if 'DATABASE_URL' not in os.environ or os.environ.get('USE_SQLITE', 'true').lower() == 'true':
+    os.environ['DATABASE_URL'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'car_wash.db')
+
 # Create Flask application
 app = create_app()
 

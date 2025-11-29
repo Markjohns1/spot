@@ -5,3 +5,8 @@ expertMode = true
 [nix]
 channel = "stable-25_05"
 packages = ["cargo", "libiconv", "rustc"]
+
+[userenv]
+
+[userenv.development]
+USE_SQLITE = "true"

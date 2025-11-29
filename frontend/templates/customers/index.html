@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Customers - The Spot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">Customers</h1>
+                    <p class="text-muted mb-0">
+                        <span class="badge bg-primary me-2">{{ customers|length }}</span>
+                        customers found
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <form method="GET" class="d-flex">
+                        <input type="text" class="form-control me-2" name="search" 
+                               placeholder="Search phone or name..." value="{{ search or '' }}">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body p-0">
+                    {% if customers %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Phone Number</th>
+                                    <th>Name</th>
+                                    <th class="d-none d-md-table-cell">Email</th>
+                                    <th>Visits</th>
+                                    <th class="d-none d-md-table-cell">Last Visit</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for customer in customers %}
+                                <tr>
+                                    <td class="fw-bold">{{ customer.phone_number }}</td>
+                                    <td>{{ customer.name or 'N/A' }}</td>
+                                    <td class="d-none d-md-table-cell">{{ customer.email or 'N/A' }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if customer.total_visits > 5 else 'info' if customer.total_visits > 1 else 'secondary' }}">
+                                            {{ customer.total_visits }}
+                                        </span>
+                                    </td>
+                                    <td class="d-none d-md-table-cell">
+                                        <small class="text-muted">
+                                            {{ customer.updated_at.strftime('%d %b %Y') if customer.updated_at else 'Never' }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('main.view_customer', customer_id=customer.id) }}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-people fs-1 d-block mb-2"></i>
+                        <p class="mb-0">No customers found</p>
+                        {% if search %}
+                        <a href="{{ url_for('main.customers') }}" class="btn btn-link">Clear search</a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

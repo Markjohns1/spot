@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Vehicles - The Spot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1">Vehicles</h1>
+                    <p class="text-muted mb-0">
+                        <span class="badge bg-primary me-2">{{ vehicles|length }}</span>
+                        vehicles registered
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <form method="GET" class="d-flex">
+                        <input type="text" class="form-control me-2" name="search" 
+                               placeholder="Search registration..." value="{{ search or '' }}">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body p-0">
+                    {% if vehicles %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Registration</th>
+                                    <th>Make</th>
+                                    <th class="d-none d-md-table-cell">Model</th>
+                                    <th class="d-none d-md-table-cell">Color</th>
+                                    <th>Owner</th>
+                                    <th class="d-none d-lg-table-cell">Services</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for vehicle in vehicles %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ vehicle.registration_number }}</span>
+                                    </td>
+                                    <td>{{ vehicle.make or 'N/A' }}</td>
+                                    <td class="d-none d-md-table-cell">{{ vehicle.model or 'N/A' }}</td>
+                                    <td class="d-none d-md-table-cell">{{ vehicle.color or 'N/A' }}</td>
+                                    <td>
+                                        {% if vehicle.customer %}
+                                            {{ vehicle.customer.name or vehicle.customer.phone_number }}
+                                        {% else %}
+                                            <span class="text-muted">Unknown</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="d-none d-lg-table-cell">
+                                        <span class="badge bg-info">{{ vehicle.get_service_count() }}</span>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('main.view_customer', customer_id=vehicle.customer_id) }}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-car-front fs-1 d-block mb-2"></i>
+                        <p class="mb-0">No vehicles found</p>
+                        {% if search %}
+                        <a href="{{ url_for('main.vehicles') }}" class="btn btn-link">Clear search</a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

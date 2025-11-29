@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}{{ customer.name or customer.phone_number }} - The Spot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('main.customers') }}">Customers</a></li>
+                    <li class="breadcrumb-item active">{{ customer.name or customer.phone_number }}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm text-center">
+                <div class="card-body py-4">
+                    <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                         style="width: 80px; height: 80px;">
+                        <i class="bi bi-person fs-1"></i>
+                    </div>
+                    <h4 class="card-title mb-1">{{ customer.name or 'Unnamed Customer' }}</h4>
+                    <p class="text-muted mb-2">{{ customer.phone_number }}</p>
+                    {% if customer.email %}
+                        <p class="text-muted small mb-2">{{ customer.email }}</p>
+                    {% endif %}
+                    <span class="badge bg-{{ 'success' if customer.total_visits > 5 else 'info' if customer.total_visits > 1 else 'secondary' }} fs-6">
+                        {{ customer.total_visits }} visits
+                    </span>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div class="text-center p-2 bg-light rounded">
+                                <div class="fw-bold text-success">KES {{ "{:,.0f}".format(customer.get_total_spent()) }}</div>
+                                <small class="text-muted">Total Spent</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center p-2 bg-light rounded">
+                                <div class="fw-bold text-info">{{ vehicles|length }}</div>
+                                <small class="text-muted">Vehicles</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-car-front me-2"></i>
+                        Vehicles
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if vehicles %}
+                    <ul class="list-group list-group-flush">
+                        {% for vehicle in vehicles %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-secondary me-2">{{ vehicle.registration_number }}</span>
+                                <small class="text-muted">{{ vehicle.make or '' }} {{ vehicle.model or '' }}</small>
+                            </div>
+                            <small class="text-muted">{{ vehicle.get_service_count() }} services</small>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-car-front fs-3 d-block mb-2"></i>
+                        <p class="mb-0">No vehicles registered</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-list-ol me-2"></i>
+                        Service History
+                    </h5>
+                    {% if current_user.role in ['admin', 'manager'] %}
+                    <a href="{{ url_for('main.new_order') }}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus-circle me-1"></i>
+                        New Order
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body p-0">
+                    {% if orders %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Order #</th>
+                                    <th>Date</th>
+                                    <th class="d-none d-md-table-cell">Vehicle</th>
+                                    <th>Status</th>
+                                    <th>Amount</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in orders %}
+                                <tr>
+                                    <td class="fw-bold">{{ order.order_number }}</td>
+                                    <td>
+                                        <small>{{ order.created_at.strftime('%d %b %Y') }}</small>
+                                    </td>
+                                    <td class="d-none d-md-table-cell">
+                                        {% if order.vehicle %}
+                                            {{ order.vehicle.registration_number }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if order.status == 'completed' else 'warning' if order.status == 'pending' else 'info' }}">
+                                            {{ order.status.replace('_', ' ').title() }}
+                                        </span>
+                                    </td>
+                                    <td class="fw-bold text-success">KES {{ "{:,.0f}".format(order.total_amount) }}</td>
+                                    <td>
+                                        <a href="{{ url_for('main.view_order', order_id=order.id) }}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-receipt fs-1 d-block mb-2"></i>
+                        <p class="mb-0">No service history yet</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

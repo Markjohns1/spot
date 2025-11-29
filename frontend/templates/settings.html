@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - The Spot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-1">System Settings</h1>
+            <p class="text-muted mb-0">Manage application configuration</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-building me-2"></i>
+                        Business Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Business Name</label>
+                        <input type="text" class="form-control" value="The Spot Car Wash" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phone Number</label>
+                        <input type="text" class="form-control" value="+254712345678" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Address</label>
+                        <input type="text" class="form-control" value="Nairobi, Kenya" readonly>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label">Currency</label>
+                        <input type="text" class="form-control" value="KES" readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-gear me-2"></i>
+                        Application Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-medium">Session Timeout</div>
+                                <small class="text-muted">Auto-logout after inactivity</small>
+                            </div>
+                            <span class="badge bg-secondary">30 minutes</span>
+                        </div>
+                        <div class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-medium">Items Per Page</div>
+                                <small class="text-muted">List pagination setting</small>
+                            </div>
+                            <span class="badge bg-secondary">20 items</span>
+                        </div>
+                        <div class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-medium">SMS Notifications</div>
+                                <small class="text-muted">Send SMS to customers</small>
+                            </div>
+                            <span class="badge bg-warning">Disabled</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        System Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="h4 mb-0 text-primary">1.0.0</div>
+                                <small class="text-muted">Version</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="h4 mb-0 text-success">Flask 2.3</div>
+                                <small class="text-muted">Framework</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="h4 mb-0 text-info">SQLite</div>
+                                <small class="text-muted">Database</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

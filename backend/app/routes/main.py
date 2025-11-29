@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from datetime import datetime, timedelta
-from sqlalchemy import func, and_, cast, Date
+from sqlalchemy import func, and_, or_, cast, Date
 from app import db
 from app.models import ServiceOrder, OrderService, Payment, User, Customer, Vehicle, Service
 
@@ -222,7 +222,7 @@ def payments():
     else:
         payments = Payment.query.order_by(Payment.created_at.desc()).limit(50).all()
 
-    return render_template('payments/index.html', payments=payments, search=search)
+    return render_template('payments/index.html', payments=payments, search=search, now=datetime.now())
 
 @bp.route('/reports')
 @login_required

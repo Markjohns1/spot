@@ -47,7 +47,7 @@ const SpotApp = {
 
     // Initialize app
     init() {
-        console.log('🚀 Initializing The Spot Car Wash Management System');
+        console.log('Initializing The Spot Car Wash Management System');
 
         // Cache DOM elements
         this.cacheElements();
@@ -64,7 +64,7 @@ const SpotApp = {
         // Check authentication state
         this.checkAuthentication();
 
-        console.log('✅ Spot App initialized successfully');
+        console.log('Spot App initialized successfully');
     },
 
     // Cache frequently used DOM elements
@@ -643,20 +643,25 @@ const SpotApp = {
     // Authentication
     // =============================================================================
 
-    async checkAuthentication() {
-        try {
-            const response = await this.apiCall('/auth/profile');
-            if (response.success) {
-                this.state.currentUser = response.data.user;
-            } else {
-                // Redirect to login if not authenticated
-                window.location.href = '/auth/login';
-            }
-        } catch (error) {
-            console.error('Auth check failed:', error);
-            // Don't redirect on network errors
+async checkAuthentication() {
+    // Skip auth check if we're already on the login page
+    if (window.location.pathname.includes('/auth/login')) {
+        return;
+    }
+    
+    try {
+        const response = await this.apiCall('/auth/profile');
+        if (response.success) {
+            this.state.currentUser = response.data.user;
         }
-    },
+    } catch (error) {
+        console.error('Auth check failed:', error);
+        // Only redirect if we get a 401/403, not on network errors
+        if (error.message && (error.message.includes('401') || error.message.includes('403'))) {
+            window.location.href = '/auth/login';
+        }
+    }
+}
 
     async logout() {
         try {

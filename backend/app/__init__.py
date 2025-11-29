@@ -41,6 +41,9 @@ def create_app():
     app.register_blueprint(api.bp)
     app.register_blueprint(main.bp)
     
+    # Exempt API routes from CSRF protection
+    csrf.exempt(api.bp)  # ← ADD THIS LINE
+    
     # User loader
     @login_manager.user_loader
     def load_user(user_id):

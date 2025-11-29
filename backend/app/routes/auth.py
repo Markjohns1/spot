@@ -92,24 +92,21 @@ def login():
     else:
         return render_template('auth/login.html')
 
-@bp.route('/logout', methods=['POST'])
+@bp.route('/logout', methods=['POST', 'GET'])  
 @login_required
 def logout():
     """Handle user logout"""
+    logout_user()
+    
     if request.is_json:
-        # API logout
-        logout_user()
         return jsonify({
             'success': True,
             'message': 'Logout successful',
-            'timestamp': datetime.datetime.utcnow().isoformat()
+            'timestamp': datetime.utcnow().isoformat()
         })
     else:
-        # Form logout
-        logout_user()
         flash('You have been logged out', 'info')
         return redirect(url_for('auth.login'))
-
 @bp.route('/profile', methods=['GET'])
 @login_required
 def profile():

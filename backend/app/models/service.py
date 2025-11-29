@@ -3,26 +3,51 @@ from app import db
 
 class Service(db.Model):
     __tablename__ = 'services'
-
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=True)
     base_price = db.Column(db.Numeric(10, 2), nullable=False)
     duration_minutes = db.Column(db.Integer, nullable=False, default=30)
+    category = db.Column(db.String(50), nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     display_order = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-
+    
     # Relationships
     order_services = db.relationship('OrderService', backref='service', lazy='dynamic')
-
-    def __init__(self, name, base_price, duration_minutes=30, description=None, display_order=0):
-        self.name = name
-        self.base_price = base_price
-        self.duration_minutes = duration_minutes
-        self.description = description
-        self.display_order = display_order
-
+    
+    # ADD THIS METHOD:
+    def to_dict(self, include_stats=False):
+        """Convert service to dictionary"""
+        data = {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'base_price': float(self.base_price),
+            'duration_minutes': self.duration_minutes,
+            'category': self.category,
+            'is_active': self.is_active,
+            'display_order': self.display_order,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+        
+        if include_stats:
+            # Add usage statistics
+            data['total_orders'] = self.order_services.count()
+            data['total_revenue'] = sum(
+                float(os.price_charged) 
+                for os in self.order_services 
+                if os.status == 'completed'
+            )
+        
+        return data
+def __init__(self, name, base_price, duration_minutes=30, description=None, category=None, display_order=0):
+    self.name = name
+    self.base_price = base_price
+    self.duration_minutes = duration_minutes
+    self.description = description
+    self.category = category  # ← ADD THIS LINE
+    self.display_order = display_order
     def get_popularity(self):
         """Get how many times this service has been used"""
         return self.order_services.filter_by(status='completed').count()
@@ -112,30 +137,31 @@ class Service(db.Model):
         self.display_order = new_order
         db.session.commit()
 
-    def to_dict(self, include_stats=False):
-        """Convert to dictionary for API responses"""
-        result = {
-            'id': self.id,
-            'name': self.name,
-            'description': self.description,
-            'base_price': float(self.base_price),
-            'duration_minutes': self.duration_minutes,
-            'is_active': self.is_active,
-            'display_order': self.display_order,
-            'created_at': self.created_at.isoformat() if self.created_at else None
-        }
+def to_dict(self, include_stats=False):
+    """Convert to dictionary for API responses"""
+    result = {
+        'id': self.id,
+        'name': self.name,
+        'description': self.description,
+        'base_price': float(self.base_price),
+        'duration_minutes': self.duration_minutes,
+        'category': self.category,
+        'is_active': self.is_active,
+        'display_order': self.display_order,
+        'created_at': self.created_at.isoformat() if self.created_at else None
+    }
 
-        if include_stats:
-            result.update({
-                'popularity': self.get_popularity(),
-                'total_revenue': self.get_total_revenue(),
-                'today_usage': self.get_today_usage(),
-                'weekly_usage': self.get_weekly_usage(),
-                'monthly_revenue': self.get_monthly_revenue(),
-                'active_assignments': len(self.get_active_assignments())
-            })
+    if include_stats:
+        result.update({
+            'popularity': self.get_popularity(),
+            'total_revenue': self.get_total_revenue(),
+            'today_usage': self.get_today_usage(),
+            'weekly_usage': self.get_weekly_usage(),
+            'monthly_revenue': self.get_monthly_revenue(),
+            'active_assignments': len(self.get_active_assignments())
+        })
 
-        return result
+    return result
 
     @staticmethod
     def get_active_services():

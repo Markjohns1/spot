@@ -346,7 +346,9 @@ def create_service():
         base_price=data['base_price'],
         duration_minutes=data.get('duration_minutes', 30),
         description=data.get('description'),
-        display_order=data.get('display_order', 0)
+        category=data.get('category'),  # ← ADD THIS
+        display_order=data.get('display_order', 0),
+        is_active=data.get('is_active', True)  # ← ADD THIS TOO
     )
 
     db.session.add(service)
@@ -360,6 +362,45 @@ def create_service():
         'message': 'Service created successfully',
         'timestamp': datetime.utcnow().isoformat()
     }), 201
+
+# CRUD for services
+@bp.route('/services/<int:service_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def delete_service(service_id):
+    """Delete service (admin only)"""
+    service = Service.query.get_or_404(service_id)
+    
+    # Check if service is used in any orders
+    from app.models import OrderService
+    order_service = OrderService.query.filter_by(service_id=service_id).first()
+    if order_service:
+        return jsonify({
+            'success': False,
+            'error': {
+                'code': 'CONSTRAINT_ERROR',
+                'message': 'Cannot delete service that has been used in orders. You can deactivate it instead.'
+            }
+        }), 400
+
+    try:
+        db.session.delete(service)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Service deleted successfully',
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': {
+                'code': 'DATABASE_ERROR',
+                'message': 'Failed to delete service'
+            }
+        }), 500
 
 @bp.route('/services/<int:service_id>', methods=['PUT'])
 @login_required
@@ -378,6 +419,8 @@ def update_service(service_id):
         service.duration_minutes = data['duration_minutes']
     if 'description' in data:
         service.description = data['description']
+    if 'category' in data:  # ADD THIS
+        service.category = data['category']
     if 'display_order' in data:
         service.display_order = data['display_order']
     if 'is_active' in data:
@@ -965,6 +1008,38 @@ def create_user():
         'timestamp': datetime.utcnow().isoformat()
     }), 201
 
+@bp.route('/users/<int:user_id>', methods=['PUT'])
+@login_required
+@admin_required
+def update_user(user_id):
+    """Update user (admin only)"""
+    user = User.query.get_or_404(user_id)
+    data = request.get_json()
+
+    # Update fields
+    if 'full_name' in data:
+        user.full_name = data['full_name']
+    if 'role' in data:
+        user.role = data['role']
+    if 'email' in data:
+        user.email = data['email']
+    if 'phone' in data:
+        user.phone = data['phone']
+    if 'is_active' in data:
+        user.is_active = data['is_active']
+    if 'password' in data and data['password']:
+        user.set_password(data['password'])
+
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'data': {
+            'user': user.to_dict()
+        },
+        'message': 'User updated successfully',
+        'timestamp': datetime.utcnow().isoformat()
+    })
 # ==================== STAFF ASSIGNMENT ENDPOINTS ====================
 
 @bp.route('/orders/<int:order_id>/services/<int:service_id>/assign', methods=['POST'])

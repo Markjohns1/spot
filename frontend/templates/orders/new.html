@@ -512,7 +512,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupFormValidation();
 
     // Setup service selection
-    setupServiceSelection();
+    // setupServiceSelection();
 
     // Auto-save draft
     setupAutoSave();
@@ -642,7 +642,7 @@ function formatRegistrationNumber() {
     }
 
     input.value = value;
-    input.dispatchEvent(new Event('input'));
+    // input.dispatchEvent(new Event('input'));
 }
 
 function quickVehicleEntry() {
@@ -708,61 +708,41 @@ function showSimilarVehicles(vehicles) {
     alert('Similar vehicles found: ' + vehicles.map(v => v.registration_number).join(', '));
 }
 
-// Service selection
-function setupServiceSelection() {
-    const serviceCards = document.querySelectorAll('.service-card');
-
-    serviceCards.forEach(card => {
-        card.addEventListener('click', function() {
-            const serviceId = parseInt(this.dataset.serviceId);
-            toggleService(serviceId);
-        });
-    });
-}
-
-function toggleService(serviceId) {
-    const card = document.querySelector(`[data-service-id="${serviceId}"]`);
-    const checkbox = document.getElementById(`service_${serviceId}`);
-
-    if (selectedServices.has(serviceId)) {
-        selectedServices.delete(serviceId);
-        card.classList.remove('border-primary', 'bg-light');
-        checkbox.checked = false;
-    } else {
-        const serviceData = {
-            id: serviceId,
-            price: parseFloat(card.dataset.servicePrice),
-            name: card.querySelector('.card-title').textContent,
-            duration: parseInt(card.querySelector('.service-duration').textContent) || 30
-        };
-
-        selectedServices.set(serviceId, serviceData);
-        card.classList.add('border-primary', 'bg-light');
-        checkbox.checked = true;
-    }
-
-    updateServiceSummary();
-    updateStaffAssignment();
-    updateOrderSummary();
-    validateStep2();
-}
 
 function updateServiceSummary() {
     const container = document.getElementById('selectedServices');
+    const subtotalEl = document.getElementById('subtotal');
+    const durationEl = document.getElementById('totalDuration');
+    const totalEl = document.getElementById('totalAmount');
 
-    if (selectedServices.size === 0) {
-        container.innerHTML = '<div class="text-muted">No services selected</div>';
-        return;
-    }
-
-    let html = '<div class="row g-2">';
+    // Calculate totals
     let subtotal = 0;
     let totalDuration = 0;
 
     selectedServices.forEach(service => {
         subtotal += service.price;
         totalDuration += service.duration;
+    });
 
+    // Update display - ALWAYS update these, even when 0
+    if (subtotalEl) subtotalEl.textContent = `KES ${subtotal.toLocaleString()}`;
+    if (durationEl) durationEl.textContent = `${totalDuration} min`;
+    if (totalEl) totalEl.textContent = `KES ${subtotal.toLocaleString()}`;
+
+    // Update service list
+    if (!container) {
+        console.error('selectedServices container not found');
+        return;
+    }
+
+    if (selectedServices.size === 0) {
+        container.innerHTML = '<div class="text-muted">No services selected</div>';
+        return;
+    }
+
+    // Build service list HTML
+    let html = '<div class="row g-2">';
+    selectedServices.forEach(service => {
         html += `
             <div class="col-md-6">
                 <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded">
@@ -781,16 +761,55 @@ function updateServiceSummary() {
             </div>
         `;
     });
-
     html += '</div>';
     container.innerHTML = html;
+}
+// Service selection
+function setupServiceSelection() {
+    const serviceCards = document.querySelectorAll('.service-card');
 
-    // Update totals
-    document.getElementById('subtotal').textContent = `KES ${subtotal.toLocaleString()}`;
-    document.getElementById('totalDuration').textContent = `${totalDuration} min`;
-    document.getElementById('totalAmount').textContent = `KES ${subtotal.toLocaleString()}`;
+    serviceCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const serviceId = parseInt(this.dataset.serviceId);
+            toggleService(serviceId);
+        });
+    });
 }
 
+function toggleService(serviceId) {
+    const card = document.querySelector(`[data-service-id="${serviceId}"]`);
+    const checkbox = document.getElementById(`service_${serviceId}`);
+
+    if (selectedServices.has(serviceId)) {
+        // Deselect service
+        selectedServices.delete(serviceId);
+        card.classList.remove('border-primary', 'bg-light', 'selected');
+        if (checkbox) checkbox.checked = false;
+    } else {
+        // Select service
+        const serviceDurationText = card.querySelector('.service-duration').textContent;
+        const durationMatch = serviceDurationText.match(/\d+/);
+        const duration = durationMatch ? parseInt(durationMatch[0]) : 30;
+
+        const serviceData = {
+            id: serviceId,
+            price: parseFloat(card.dataset.servicePrice),
+            name: card.querySelector('.card-title').textContent.trim(),
+            duration: duration
+        };
+
+        selectedServices.set(serviceId, serviceData);
+        card.classList.add('border-primary', 'bg-light', 'selected');
+        if (checkbox) checkbox.checked = true;
+    }
+
+    // CRITICAL: Update everything after selection changes
+    updateServiceSummary();
+    updateStaffAssignment();
+    updateOrderSummary();
+    validateStep2();
+}
+    
 function removeService(serviceId) {
     toggleService(serviceId);
 }
@@ -947,32 +966,48 @@ function validateStep1() {
 }
 
 function validateStep2() {
-    if (selectedServices.size === 0) {
-        alert('Please select at least one service');
-        return false;
+    const nextBtn = document.getElementById('step2NextBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    const hasServices = selectedServices.size > 0;
+    
+    // Enable/disable buttons based on whether services are selected
+    if (nextBtn) {
+        nextBtn.disabled = !hasServices;
     }
-
-    return true;
+    
+    if (submitBtn) {
+        submitBtn.disabled = !hasServices;
+    }
+    
+    return hasServices;
 }
 
 function updateOrderSummary() {
     // Customer
     const customerPhone = document.getElementById('customerSearch').value;
     const customerName = document.getElementById('customerName').value;
-    document.getElementById('summaryCustomer').textContent =
-        customerName || customerPhone || '-';
+    const summaryCustomerEl = document.getElementById('summaryCustomer');
+    if (summaryCustomerEl) {
+        summaryCustomerEl.textContent = customerName || customerPhone || '-';
+    }
 
     // Vehicle
     const registration = document.getElementById('registrationNumber').value;
     const make = document.getElementById('vehicleMake').value;
     const model = document.getElementById('vehicleModel').value;
-    document.getElementById('summaryVehicle').textContent =
-        `${registration} (${make} ${model || ''})`.trim();
+    const summaryVehicleEl = document.getElementById('summaryVehicle');
+    if (summaryVehicleEl) {
+        summaryVehicleEl.textContent = `${registration} ${make ? '(' + make + ' ' + (model || '') + ')' : ''}`.trim();
+    }
 
-    // Services
-    document.getElementById('summaryServicesCount').textContent = selectedServices.size;
+    // Services count
+    const summaryServicesCountEl = document.getElementById('summaryServicesCount');
+    if (summaryServicesCountEl) {
+        summaryServicesCountEl.textContent = selectedServices.size;
+    }
 
-    // Duration and total
+    // Calculate totals
     let totalDuration = 0;
     let totalCost = 0;
 
@@ -981,51 +1016,24 @@ function updateOrderSummary() {
         totalCost += service.price;
     });
 
-    document.getElementById('summaryDuration').textContent = `${totalDuration} min`;
-    document.getElementById('summaryTotal').textContent = `KES ${totalCost.toLocaleString()}`;
+    // Update summary display
+    const summaryDurationEl = document.getElementById('summaryDuration');
+    const summaryTotalEl = document.getElementById('summaryTotal');
+    
+    if (summaryDurationEl) {
+        summaryDurationEl.textContent = `${totalDuration} min`;
+    }
+    if (summaryTotalEl) {
+        summaryTotalEl.textContent = `KES ${totalCost.toLocaleString()}`;
+    }
 
     // Priority
     const priority = document.querySelector('input[name="priority"]:checked')?.value || 'normal';
-    document.getElementById('summaryPriority').textContent = priority.charAt(0).toUpperCase() + priority.slice(1);
-
-    // Enable submit button
-    document.getElementById('submitBtn').disabled = false;
+    const summaryPriorityEl = document.getElementById('summaryPriority');
+    if (summaryPriorityEl) {
+        summaryPriorityEl.textContent = priority.charAt(0).toUpperCase() + priority.slice(1);
+    }
 }
-
-// Form submission
-document.getElementById('newOrderForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    if (!validateCurrentStep()) {
-        return;
-    }
-
-    // Show loading
-    document.getElementById('loadingOverlay').classList.remove('d-none');
-
-    // Prepare order data
-    const orderData = prepareOrderData();
-
-    try {
-        const response = await SpotApp.apiCall('/orders', 'POST', orderData);
-
-        if (response.success) {
-            // Show success modal
-            showSuccessModal(response.data.order);
-
-            // Clear form
-            this.reset();
-            resetFormState();
-        } else {
-            alert('Error creating order: ' + response.error.message);
-        }
-    } catch (error) {
-        console.error('Order creation error:', error);
-        alert('Error creating order. Please try again.');
-    } finally {
-        document.getElementById('loadingOverlay').classList.add('d-none');
-    }
-});
 
 function prepareOrderData() {
     // Customer data
@@ -1231,16 +1239,44 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// Auto-format registration on input
-document.getElementById('registrationNumber').addEventListener('input', function(e) {
-    formatRegistrationNumber();
-});
 
 // Search customer on Enter
 document.getElementById('customerSearch').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
         e.preventDefault();
         searchCustomer();
+    }
+});
+// Add these missing functions that are referenced in the template
+
+function showLoading(message) {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        const textElement = overlay.querySelector('p');
+        if (textElement) {
+            textElement.textContent = message || 'Please wait...';
+        }
+        overlay.classList.remove('d-none');
+    }
+}
+
+function hideLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        overlay.classList.add('d-none');
+    }
+}
+
+// Check if services are loaded
+document.addEventListener('DOMContentLoaded', function() {
+    const serviceGrid = document.getElementById('serviceGrid');
+    console.log('Service grid:', serviceGrid);
+    console.log('Service cards found:', document.querySelectorAll('.service-card').length);
+    
+    // If no services found, show error
+    if (document.querySelectorAll('.service-card').length === 0) {
+        console.error('No services loaded! Check if services are being passed from backend.');
+        alert('Warning: No services available. Please add services first in the Services page.');
     }
 });
 </script>
@@ -1258,10 +1294,10 @@ document.getElementById('customerSearch').addEventListener('keypress', function(
     box-shadow: 0 0.25rem 0.5rem rgba(0,0,0,0.15);
 }
 
-.service-card.selected,
-.service-card.border-primary {
-    border-color: #007bff;
-    background-color: #f8f9fa;
+.service-card.selected {
+    border-color: #007bff !important;
+    background-color: #f8f9fa !important;
+    box-shadow: 0 0.5rem 1rem rgba(0,123,255,0.25) !important;
 }
 
 .service-icon {
